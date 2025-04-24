@@ -1,0 +1,25 @@
+name: Publish
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+*'
+
+jobs:
+  publish:
+    if: github.repository == 'parseplz/primitives'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: actions-rust-lang/setup-rust-toolchain@9399c7bb15d4c7d47b27263d024f0a4978346ba4
+        with:
+          cache: false
+
+      - name: Publish crates
+        uses: katyo/publish-crates@02cc2f1ad653fb25c7d1ff9eb590a8a50d06186b
+        with:
+          registry-token: ${{ secrets.CRATES_TOKEN }}

@@ -1,0 +1,21 @@
+[package]
+name = "oneone-plz"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+# primitives
+body-plz = "0.0.2"
+buffer-plz = "0.0.2"
+header-plz = "0.0.2"
+mime-plz = "0.0.2"
+protocol-traits-plz = "0.0.2"
+
+# basic
+bytes = "1.10.1"
+thiserror = "2.0.12"
+
+# compression
+brotli = "8.0.0"
+flate2 = "1.1.0"
+zstd = "0.13.3"
