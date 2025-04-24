@@ -6,7 +6,7 @@ on:
 
 jobs:
   publish:
-    if: github.repository == 'parseplz/primitives'
+    if: github.repository == 'parseplz/oneone-plz'
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
