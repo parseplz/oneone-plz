@@ -1,6 +1,10 @@
 [package]
 name = "oneone-plz"
-version = "0.1.0"
+version = "0.0.1"
+authors = ["darkseid", "sytten <emile@caido.io>"]
+description = "HTTP/1 parser for the ParsePlz ecosystem"
+repository = "https://github.com/parseplz/oneone-plz"
+license = "MIT"
 edition = "2024"
 
 [dependencies]
