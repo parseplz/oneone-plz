@@ -1,4 +1,4 @@
-name: Run CI
+name: Run Checks
 
 on:
   pull_request:
