@@ -36,7 +36,7 @@ pub trait UpdateHttp {
 pub fn update_one_one<T>(mut buf: BytesMut) -> Result<OneOne<T>, UpdateFrameError>
 where
     T: InfoLine,
-    HeaderStruct<T>: ParseBodyHeaders,
+    MessageHead<T>: ParseBodyHeaders,
 {
     // 1. Find HEADER_DELIMITER (2 * CRLF) in buf.
     let index = buf

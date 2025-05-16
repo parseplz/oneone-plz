@@ -8,8 +8,8 @@ use error::*;
 use header_plz::{
     body_headers::{BodyHeader, parse::ParseBodyHeaders},
     const_headers::{CONTENT_ENCODING, CONTENT_LENGTH, TRAILER, TRANSFER_ENCODING},
-    header_struct::HeaderStruct,
     info_line::InfoLine,
+    message_head::MessageHead,
 };
 
 use crate::oneone::OneOne;
@@ -35,7 +35,7 @@ use crate::oneone::OneOne;
 pub fn convert_one_dot_one_body<T>(mut one: OneOne<T>) -> Result<OneOne<T>, DecompressError>
 where
     T: InfoLine,
-    HeaderStruct<T>: ParseBodyHeaders,
+    MessageHead<T>: ParseBodyHeaders,
 {
     // 1. If chunked body convert chunked to CL
     if let Some(Body::Chunked(_)) = one.body() {
@@ -102,7 +102,7 @@ where
 fn convert_chunked<T>(mut one: OneOne<T>, vec_body: Vec<ChunkedBody>) -> OneOne<T>
 where
     T: InfoLine,
-    HeaderStruct<T>: ParseBodyHeaders,
+    MessageHead<T>: ParseBodyHeaders,
 {
     let mut new_body = BytesMut::with_capacity(total_chunk_size(&vec_body));
     vec_body.into_iter().for_each(|body| match body {

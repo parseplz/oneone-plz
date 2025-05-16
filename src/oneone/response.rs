@@ -8,7 +8,7 @@ use super::OneOne;
 // OneOne response methods
 impl OneOne<Response> {
     pub fn status_code(&self) -> Cow<str> {
-        String::from_utf8_lossy(self.header_struct.infoline().status())
+        String::from_utf8_lossy(self.message_head.infoline().status())
     }
 
     pub fn content_length(&self) -> usize {

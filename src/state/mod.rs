@@ -7,8 +7,8 @@ use bytes::BytesMut;
 use header_plz::{
     body_headers::{parse::ParseBodyHeaders, transfer_types::TransferType},
     const_headers::{CLOSE, WS_EXT},
-    header_struct::HeaderStruct,
     info_line::InfoLine,
+    message_head::MessageHead,
     reader::read_header,
 };
 use protocol_traits_plz::Step;
@@ -34,7 +34,7 @@ where
 impl<T> State<T>
 where
     T: InfoLine,
-    HeaderStruct<T>: ParseBodyHeaders,
+    MessageHead<T>: ParseBodyHeaders,
 {
     #[allow(clippy::new_without_default)]
     pub fn new() -> State<T> {
@@ -137,7 +137,7 @@ where
 impl<T> Step<OneOne<T>> for State<T>
 where
     T: InfoLine,
-    HeaderStruct<T>: ParseBodyHeaders,
+    MessageHead<T>: ParseBodyHeaders,
 {
     type StateError = HttpReadError;
     type FrameError = DecompressError;
@@ -321,7 +321,7 @@ mod tests {
         state = state.next(event).unwrap();
         match state {
             State::End(one) => {
-                assert_eq!(one.header_struct().infoline().method(), b"GET");
+                assert_eq!(one.message_head().infoline().method(), b"GET");
             }
             _ => {
                 panic!()
