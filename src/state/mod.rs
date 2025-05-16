@@ -19,7 +19,8 @@ use crate::{
     oneone::OneOne,
 };
 
-#[cfg_attr(test, derive(Debug, PartialEq, Eq))]
+#[cfg_attr(test, derive(PartialEq, Eq))]
+#[derive(Debug)]
 pub enum State<T>
 where
     T: InfoLine,
