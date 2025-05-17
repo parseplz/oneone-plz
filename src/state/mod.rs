@@ -27,7 +27,9 @@ where
 {
     ReadHeader,
     ReadBodyContentLength(OneOne<T>, usize),
+    ReadBodyContentLengthExtra(OneOne<T>),
     ReadBodyChunked(OneOne<T>, ChunkReader),
+    ReadBodyChunkedExtra(OneOne<T>),
     ReadBodyClose(OneOne<T>),
     End(OneOne<T>),
 }
@@ -100,24 +102,42 @@ where
  *      3. ReadBodyContentLength(size) , Read
  *
  *             match content_length_read(buf, size)
- *                  true    =>  State::End
+ *                  true    =>  if no extra data, State::End
+ *                              else, State::ReadBodyContentLengthExtra
+ *
  *                  false   =>  remain in same state.
  *
- *      4. ReadBodyContentLength(size) , End
+ *      4. ReadBodyContentLength(size) , End        // less data than needed
  *          a. If data in buf, add it to request body, by calling set_body()
  *          b. transition to State::End
  *
- *      5. Chunked , Read
+ *      5. ReadBodyContentLengthExtra(oneone), Read   // More data than needed
+ *          remain in same state i.e. read until EOF is reached
+ *
+ *      6. ReadBodyContentLengthExtra(oneone), End
+ *          a. add extra data to body
+ *          b. transition to State::End
+ *
+ *      7. Chunked , Read
  *          a. Call next() on chunk_state with buf
  *          b. if Some(chunk) is returned, add to body.
  *          c. match chunk_state
  *               1. LastChunk, check trailer header present
  *                  a. true     => ChunkReader::ReadTrailers
  *                  b. false    => ChunkReader::EndCRLF
- *               2. End, State::End
+ *               2. End,
+ *                  a. if no extra data, State::End
+ *                  b. if extra data, State::ReadBodyChunkedExtra
  *               3. Failed, State::Failed
  *               4. other states, continue
  *          d. if None, remain in same state.
+ *
+ *      N. ReadBodyChunkedExtra(OneOne<T>), Read
+ *          remain in same state i.e. read until EOF is reached
+ *
+ *      N. ReadBodyChunkedExtra(OneOne<T>), End
+ *          a. add extra data to body
+ *          b. transition to State::End
  *
  *      6. ReadBodyClose, Read -> State::ReadBodyClose
  *          Remain in same state.
@@ -128,7 +148,18 @@ where
  *
  *      8. Chunked , End -> HttpDecodeError::ChunkReaderNotEnoughData
  *
- *      9. End, and event -> End
+ *      9. End, Event - extra data after parsing completed
+ *          match event
+ *              a. Read
+ *                  match body
+ *                      1. None                 => remain in same state
+ *                      2. Some(Body::Raw)      => State::ReadBodyContentLengthExtra
+ *                      3. Some(Body::Chunked)  => State::ReadBodyChunkedExtra
+ *              b. End
+ *                  match body
+ *                      1. None                 => add extra data as body
+ *                      2. Some(Body::Raw)  | Some(Body::Chunked) => add extra
+ *                         data to existing body
  *
  * Error:
  *       HttpDecodeError::HeaderNotEnoughData        [2]
@@ -167,7 +198,11 @@ where
                     // 3.a.
                     true => {
                         oneone.set_body(Body::Raw(buf.split_at_current_pos()));
-                        Ok(State::End(oneone))
+                        if buf.len() > 0 {
+                            Ok(State::ReadBodyContentLengthExtra(oneone))
+                        } else {
+                            Ok(State::End(oneone))
+                        }
                     }
                     // 3.b.
                     false => Ok(State::ReadBodyContentLength(oneone, size)),
@@ -177,20 +212,32 @@ where
             // 4. Read Body ContentLength , End
             (State::ReadBodyContentLength(mut oneone, _size), Event::End(buf)) => {
                 if buf.len() > 0 {
-                    oneone.set_body(Body::Raw(buf.split_at_current_pos()));
+                    oneone.set_body(Body::Raw(buf.into_inner()));
                 }
                 Ok(State::End(oneone))
             }
-            // 5. Chunked Reader , Read
+            // 5. Read Body ContentLength Extra, Read
+            (State::ReadBodyContentLengthExtra(mut oneone), Event::Read(buf)) => {
+                Ok(State::ReadBodyContentLengthExtra(oneone))
+            }
+            // 6. Read Body ContentLength Extra, End
+            (State::ReadBodyContentLengthExtra(mut oneone), Event::End(buf)) => {
+                let extra_body = buf.into_inner();
+                if let Some(Body::Raw(raw)) = oneone.body_as_mut() {
+                    raw.unsplit(extra_body);
+                }
+                Ok(State::End(oneone))
+            }
+            // 7. Chunked Reader , Read
             (State::ReadBodyChunked(mut oneone, mut chunk_state), Event::Read(buf)) => loop {
-                // 5.a. Call next() on chunk_state with buf
+                // 7.a. Call next() on chunk_state with buf
                 match chunk_state.next(buf) {
-                    // 5.b. if Some(chunk) is returned, add to body.
+                    // 7.b. if Some(chunk) is returned, add to body.
                     Some(chunk_to_add) => {
                         oneone.body_as_mut().unwrap().push_chunk(chunk_to_add);
-                        // 5.c. match chunk_state
+                        // 7.c. match chunk_state
                         match chunk_state {
-                            // 5.c.1. LastChunk, check trailer headers
+                            // 7.c.1. LastChunk, check trailer headers
                             ChunkReader::LastChunk => {
                                 chunk_state = if oneone.has_trailers() {
                                     ChunkReader::ReadTrailers
@@ -199,11 +246,11 @@ where
                                 };
                                 continue;
                             }
-                            // 5.c.2. End, State::End
+                            // 7.c.2. End, State::End
                             ChunkReader::End => return Ok(State::End(oneone)),
-                            // 5.c.3. Failed, State::Failed
+                            // 7.c.3. Failed, State::Failed
                             ChunkReader::Failed(e) => return Err(e.into()),
-                            // 5.c.4. other states, continue
+                            // 7.c.4. other states, continue
                             _ => continue,
                         }
                     }
@@ -212,6 +259,14 @@ where
                     }
                 }
             },
+
+            (State::ReadBodyChunkedExtra(mut oneone), Event::Read(buf)) => {
+                Ok(State::ReadBodyChunkedExtra(oneone))
+            }
+            (State::ReadBodyChunkedExtra(mut oneone), Event::End(buf)) => {
+                let extra_body = buf.into_inner();
+                todo!()
+            }
             // 6. ReadBodyClose, Read
             (State::ReadBodyClose(oneone), Event::Read(_)) => Ok(Self::ReadBodyClose(oneone)),
 
@@ -225,8 +280,12 @@ where
             (State::ReadBodyChunked(..), Event::End(_)) => {
                 Err(HttpReadError::ChunkReaderNotEnoughData)
             }
-            // 10. Ended and any event
-            (State::End(oneone), _) => Ok(State::End(oneone)),
+            // 10. Ended , Read
+            (State::End(mut oneone), _) => match oneone.body() {
+                Some(Body::Raw(_)) => Ok(State::ReadBodyContentLengthExtra(oneone)),
+                Some(Body::Chunked(_)) => todo!(),
+                None => Ok(State::ReadBodyClose(oneone)),
+            },
         }
     }
 
@@ -350,7 +409,7 @@ mod tests {
         let req = "POST /echo HTTP/1.1\r\n\
                    Host: reqbin.com\r\n\
                    content-length: 7\r\n\r\n\
-                   Hello, World";
+                   Mozilla";
         let mut buf: BytesMut = req.into();
         let mut cbuf = Cursor::new(&mut buf);
         let mut state: State<Request> = State::new();

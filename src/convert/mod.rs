@@ -78,7 +78,7 @@ where
             one.header_map_as_mut()
                 .change_header_value_on_pos(pos, &len);
         }
-        _ => {
+        None => {
             // 4.b. else add new cl
             let content_length_header = (CONTENT_LENGTH, len.as_str()).into();
             one.header_map_as_mut().add_header(content_length_header);

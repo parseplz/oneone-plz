@@ -1,5 +1,10 @@
 use crate::response::parse_full_response;
 
+use buffer_plz::{Cursor, Event};
+use bytes::BytesMut;
+use header_plz::info_line::{request::Request, response::Response};
+use oneone_plz::{oneone::OneOne, state::State};
+
 use protocol_traits_plz::Frame;
 use protocol_traits_plz::Step;
 
@@ -86,4 +91,85 @@ fn test_response_cl_large() {
         .to_string();
     input.push_str(&"hello world".repeat(100));
     let _ = parse_full_response(input.as_bytes());
+}
+
+#[test]
+fn test_response_cl_extra_single() {
+    let input = "HTTP/1.1 200 OK\r\n\
+                 Content-Length: 5\r\n\r\n\
+                 hello world more data";
+    let mut buf = BytesMut::from(input.as_bytes());
+    let mut cbuf = Cursor::new(&mut buf);
+    let mut state: State<Response> = State::new();
+    state = state.next(Event::Read(&mut cbuf)).unwrap();
+    state = state.next(Event::End(&mut cbuf)).unwrap();
+
+    let response = state.into_frame().unwrap();
+    let verify = "HTTP/1.1 200 OK\r\n\
+                  Content-Length: 21\r\n\r\n\
+                  hello world more data";
+    assert_eq!(response.into_data(), verify);
+}
+
+#[test]
+fn test_response_cl_extra_multiple() {
+    let input = "HTTP/1.1 200 OK\r\n\
+                 Content-Length: 10\r\n\r\n\
+                 h";
+    let mut buf = BytesMut::from(input.as_bytes());
+    let mut cbuf = Cursor::new(&mut buf);
+    let mut state: State<Response> = State::new();
+    state = state.next(Event::Read(&mut cbuf)).unwrap();
+    cbuf.as_mut().extend_from_slice(b"ello world more data");
+    state = state.next(Event::End(&mut cbuf)).unwrap();
+
+    let response = state.into_frame().unwrap();
+    let verify = "HTTP/1.1 200 OK\r\n\
+                  Content-Length: 21\r\n\r\n\
+                  hello world more data";
+    assert_eq!(response.into_data(), verify);
+}
+
+#[test]
+fn test_response_cl_extra_finished_read_end() {
+    let input = "HTTP/1.1 200 OK\r\n\
+                 Content-Length: 5\r\n\r\n\
+                 hello";
+    let mut buf = BytesMut::from(input.as_bytes());
+    let mut cbuf = Cursor::new(&mut buf);
+    let mut state: State<Response> = State::new();
+    state = state.next(Event::Read(&mut cbuf)).unwrap();
+    assert!(matches!(state, State::End(_)));
+    cbuf.as_mut().extend_from_slice(b" world more data ");
+    state = state.next(Event::Read(&mut cbuf)).unwrap();
+    assert!(matches!(state, State::ReadBodyContentLengthExtra(_)));
+    cbuf.as_mut().extend_from_slice(b"added");
+    state = state.next(Event::End(&mut cbuf)).unwrap();
+    assert!(matches!(state, State::End(_)));
+    let response = state.into_frame().unwrap();
+    let verify = "HTTP/1.1 200 OK\r\n\
+                  Content-Length: 27\r\n\r\n\
+                  hello world more data added";
+    assert_eq!(response.into_data(), verify);
+}
+
+#[test]
+fn test_response_cl_extra_finished_end() {
+    let input = "HTTP/1.1 200 OK\r\n\
+                 Content-Length: 5\r\n\r\n\
+                 hello";
+    let mut buf = BytesMut::from(input.as_bytes());
+    let mut cbuf = Cursor::new(&mut buf);
+    let mut state: State<Response> = State::new();
+    state = state.next(Event::Read(&mut cbuf)).unwrap();
+    assert!(matches!(state, State::End(_)));
+    cbuf.as_mut().extend_from_slice(b" world more data added");
+    state = state.next(Event::End(&mut cbuf)).unwrap();
+    state = state.next(Event::End(&mut cbuf)).unwrap();
+    assert!(matches!(state, State::End(_)));
+    let response = state.into_frame().unwrap();
+    let verify = "HTTP/1.1 200 OK\r\n\
+                      Content-Length: 27\r\n\r\n\
+                      hello world more data added";
+    assert_eq!(response.into_data(), verify);
 }
