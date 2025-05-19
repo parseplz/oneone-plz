@@ -131,7 +131,27 @@ fn test_response_cl_extra_multiple() {
 }
 
 #[test]
-fn test_response_cl_extra_finished_read_end() {
+fn test_response_cl_extra_finished_end_single() {
+    let input = "HTTP/1.1 200 OK\r\n\
+                 Content-Length: 5\r\n\r\n\
+                 hello";
+    let mut buf = BytesMut::from(input.as_bytes());
+    let mut cbuf = Cursor::new(&mut buf);
+    let mut state: State<Response> = State::new();
+    state = state.next(Event::Read(&mut cbuf)).unwrap();
+    assert!(matches!(state, State::End(_)));
+    cbuf.as_mut().extend_from_slice(b" world more data added");
+    state = state.next(Event::End(&mut cbuf)).unwrap();
+    assert!(matches!(state, State::End(_)));
+    let response = state.into_frame().unwrap();
+    let verify = "HTTP/1.1 200 OK\r\n\
+                      Content-Length: 27\r\n\r\n\
+                      hello world more data added";
+    assert_eq!(response.into_data(), verify);
+}
+
+#[test]
+fn test_response_cl_extra_finished_read_end_multiple() {
     let input = "HTTP/1.1 200 OK\r\n\
                  Content-Length: 5\r\n\r\n\
                  hello";
@@ -150,26 +170,5 @@ fn test_response_cl_extra_finished_read_end() {
     let verify = "HTTP/1.1 200 OK\r\n\
                   Content-Length: 27\r\n\r\n\
                   hello world more data added";
-    assert_eq!(response.into_data(), verify);
-}
-
-#[test]
-fn test_response_cl_extra_finished_end() {
-    let input = "HTTP/1.1 200 OK\r\n\
-                 Content-Length: 5\r\n\r\n\
-                 hello";
-    let mut buf = BytesMut::from(input.as_bytes());
-    let mut cbuf = Cursor::new(&mut buf);
-    let mut state: State<Response> = State::new();
-    state = state.next(Event::Read(&mut cbuf)).unwrap();
-    assert!(matches!(state, State::End(_)));
-    cbuf.as_mut().extend_from_slice(b" world more data added");
-    state = state.next(Event::End(&mut cbuf)).unwrap();
-    state = state.next(Event::End(&mut cbuf)).unwrap();
-    assert!(matches!(state, State::End(_)));
-    let response = state.into_frame().unwrap();
-    let verify = "HTTP/1.1 200 OK\r\n\
-                      Content-Length: 27\r\n\r\n\
-                      hello world more data added";
     assert_eq!(response.into_data(), verify);
 }

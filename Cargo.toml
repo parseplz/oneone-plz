@@ -9,7 +9,7 @@ edition = "2024"
 
 [dependencies]
 # primitives
-body-plz = "0.0.3"
+body-plz = "0.0.4"
 buffer-plz = "0.0.2"
 header-plz = "0.0.3"
 mime-plz = "0.0.2"
