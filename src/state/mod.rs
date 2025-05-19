@@ -217,7 +217,7 @@ where
                 Ok(State::End(oneone))
             }
             // 5. Read Body ContentLength Extra, Read
-            (State::ReadBodyContentLengthExtra(oneone), Event::Read(buf)) => {
+            (State::ReadBodyContentLengthExtra(oneone), Event::Read(_)) => {
                 Ok(State::ReadBodyContentLengthExtra(oneone))
             }
             // 6. Read Body ContentLength Extra, End
@@ -269,7 +269,7 @@ where
                 Err(HttpReadError::ChunkReaderNotEnoughData) // Partial ?
             }
 
-            (State::ReadBodyChunkedExtra(oneone), Event::Read(buf)) => {
+            (State::ReadBodyChunkedExtra(oneone), Event::Read(_)) => {
                 Ok(State::ReadBodyChunkedExtra(oneone))
             }
             (State::ReadBodyChunkedExtra(mut oneone), Event::End(buf)) => {
