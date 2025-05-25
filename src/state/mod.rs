@@ -9,7 +9,7 @@ use header_plz::{
     const_headers::{CLOSE, WS_EXT},
     info_line::InfoLine,
     message_head::MessageHead,
-    reader::read_header,
+    reader::find_message_head_end,
 };
 use protocol_traits_plz::Step;
 
@@ -25,7 +25,7 @@ pub enum State<T>
 where
     T: InfoLine,
 {
-    ReadHeader,
+    ReadMessageHead,
     ReadBodyContentLength(OneOne<T>, usize),
     ReadBodyContentLengthExtra(OneOne<T>),
     ReadBodyChunked(OneOne<T>, ChunkReader),
@@ -41,7 +41,7 @@ where
 {
     #[allow(clippy::new_without_default)]
     pub fn new() -> State<T> {
-        State::<T>::ReadHeader
+        State::<T>::ReadMessageHead
     }
 
     /* Steps:
@@ -105,7 +105,7 @@ where
              *         remaining data.
              *      b. false, remain in same state.
              */
-            (State::ReadHeader, Event::Read(buf)) => match read_header(buf) {
+            (State::ReadMessageHead, Event::Read(buf)) => match find_message_head_end(buf) {
                 true => {
                     let raw_headers = buf.split_at_current_pos();
                     self = State::build_oneone(raw_headers)?;
@@ -114,11 +114,11 @@ where
                     }
                     Ok(self)
                 }
-                false => Ok(Self::ReadHeader),
+                false => Ok(Self::ReadMessageHead),
             },
 
             // ReadHeader , End -> Failed [partial]
-            (State::ReadHeader, Event::End(_)) => Err(HttpReadError::HeaderNotEnoughData)?,
+            (State::ReadMessageHead, Event::End(_)) => Err(HttpReadError::HeaderNotEnoughData)?,
 
             /* ReadBodyContentLength(size) , Read
              *      match content_length_read(buf, size)
@@ -385,7 +385,7 @@ mod tests {
         let mut state: State<Request> = State::new();
         let event = Event::Read(&mut cbuf);
         state = state.next(event).unwrap();
-        assert!(matches!(state, State::ReadHeader));
+        assert!(matches!(state, State::ReadMessageHead));
         assert_eq!(cbuf.position(), 17);
         let event = Event::End(&mut cbuf);
         let result = state.next(event);
@@ -447,7 +447,7 @@ mod tests {
         let mut state: State<Request> = State::new();
         let event = Event::Read(&mut cbuf);
         state = state.next(event).unwrap();
-        assert!(matches!(state, State::ReadHeader));
+        assert!(matches!(state, State::ReadMessageHead));
         assert_eq!(cbuf.position(), 39);
     }
 

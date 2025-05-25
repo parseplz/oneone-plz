@@ -34,11 +34,11 @@ fn test_response_partial_headers() {
     let mut state: State<Response> = State::new();
     let event = Event::Read(&mut cbuf);
     state = state.next(event).unwrap();
-    assert!(matches!(state, State::ReadHeader));
+    assert!(matches!(state, State::ReadMessageHead));
     cbuf.as_mut().extend_from_slice(b"Server: Apache\r\n");
     let event = Event::Read(&mut cbuf);
     state = state.next(event).unwrap();
-    assert!(matches!(state, State::ReadHeader));
+    assert!(matches!(state, State::ReadMessageHead));
 
     cbuf.as_mut()
         .extend_from_slice(b"x-frame-options: DENY\r\n\r\n");
