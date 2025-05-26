@@ -60,7 +60,8 @@ where
      *      3. Default => End
      */
 
-    fn build_oneone(headers: BytesMut) -> Result<Self, HttpReadError> {
+    #[allow(clippy::result_large_err)]
+    fn build_oneone(headers: BytesMut) -> Result<Self, HttpReadError<T>> {
         let mut one = OneOne::new(headers)?;
         let next_state = match one.body_headers() {
             None => Self::End(one),
@@ -92,7 +93,7 @@ where
     T: InfoLine,
     MessageHead<T>: ParseBodyHeaders,
 {
-    type StateError = HttpReadError;
+    type StateError = HttpReadError<T>;
     type FrameError = DecompressError;
 
     fn next(mut self, event: Event) -> Result<Self, Self::StateError> {
@@ -118,7 +119,9 @@ where
             },
 
             // ReadHeader , End -> Failed [partial]
-            (State::ReadMessageHead, Event::End(_)) => Err(HttpReadError::HeaderNotEnoughData)?,
+            (State::ReadMessageHead, Event::End(buf)) => {
+                Err(HttpReadError::Unparsed(buf.into_inner()))?
+            }
 
             /* ReadBodyContentLength(size) , Read
              *      match content_length_read(buf, size)
@@ -127,6 +130,8 @@ where
              *
              *          2. false =>  remain in same state.
              */
+
+            /*
             (State::ReadBodyContentLength(mut oneone, mut size), Event::Read(buf)) => {
                 match read_content_length(buf, &mut size) {
                     true => {
@@ -139,19 +144,46 @@ where
                     }
                     false => Ok(State::ReadBodyContentLength(oneone, size)),
                 }
-            }
+            } */
 
             /* ReadBodyContentLength(size) , End [partial]
              *      1. If data in buf, add it to request body, by calling
              *         set_body()
-             *      2. transition to State::End
+             *      2. Error with ContentLengthPartial
              */
-            (State::ReadBodyContentLength(mut oneone, _size), Event::End(buf)) => {
+            /*
+            (State::ReadBodyContentLength(mut oneone, mut size), Event::End(buf)) => {
                 if buf.len() > 0 {
                     oneone.set_body(Body::Raw(buf.into_inner()));
                 }
-                Ok(State::End(oneone))
+                Err(HttpReadError::ContentLengthPartial(oneone))?
             }
+            */
+            (State::ReadBodyContentLength(mut oneone, mut size), mut event) => match event {
+                Event::Read(ref mut buf) | Event::End(ref mut buf) => {
+                    match read_content_length(buf, &mut size) {
+                        true => {
+                            oneone.set_body(Body::Raw(buf.split_at_current_pos()));
+                            if buf.len() > 0 {
+                                let next_state = State::ReadBodyContentLengthExtra(oneone);
+                                match event {
+                                    Event::Read(_) => Ok(next_state),
+                                    Event::End(_) => next_state.next(event),
+                                }
+                            } else {
+                                Ok(State::End(oneone))
+                            }
+                        }
+                        false => match event {
+                            Event::Read(_) => Ok(State::ReadBodyContentLength(oneone, size)),
+                            Event::End(buf) => Err(HttpReadError::ContentLengthPartial(
+                                oneone,
+                                buf.split_at_current_pos(),
+                            ))?,
+                        },
+                    }
+                }
+            },
 
             /* ReadBodyContentLengthExtra(oneone), Read
              *      i.e.More data than needed
@@ -169,6 +201,8 @@ where
                 let extra_body = buf.into_inner();
                 if let Some(Body::Raw(raw)) = oneone.body_as_mut() {
                     raw.unsplit(extra_body);
+                } else {
+                    oneone.set_body(Body::Raw(extra_body));
                 }
                 Ok(State::End(oneone))
             }
@@ -378,7 +412,7 @@ mod tests {
     }
 
     #[test]
-    fn test_oneone_state_get_failed() {
+    fn test_oneone_state_get_partial() {
         let req = "GET /echo HTTP/1.1\r\n";
         let mut buf: BytesMut = req.into();
         let mut cbuf = Cursor::new(&mut buf);
@@ -389,7 +423,7 @@ mod tests {
         assert_eq!(cbuf.position(), 17);
         let event = Event::End(&mut cbuf);
         let result = state.next(event);
-        assert!(matches!(result, Err(HttpReadError::HeaderNotEnoughData)));
+        assert!(matches!(result, Err(HttpReadError::Unparsed(_))));
     }
 
     #[test]

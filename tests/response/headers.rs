@@ -1,23 +1,20 @@
 use buffer_plz::{Cursor, Event};
 use bytes::BytesMut;
 use header_plz::info_line::{request::Request, response::Response};
-use oneone_plz::{oneone::OneOne, state::State};
+use oneone_plz::{error::HttpReadError, oneone::OneOne, state::State};
 use protocol_traits_plz::Frame;
 use protocol_traits_plz::Step;
 
 use super::parse_full_response;
 
 #[test]
-fn test_response_head() {
+fn test_response_message_head_single() {
     let input = "HTTP/1.1 200 OK\r\n\
-                 Content-Length: 10000\r\n\r\n";
+                 Value: 10000\r\n\r\n";
     let mut buf = BytesMut::from(input);
     let mut cbuf = Cursor::new(&mut buf);
     let mut state: State<Response> = State::new();
     let event = Event::Read(&mut cbuf);
-    state = state.next(event).unwrap();
-    assert!(matches!(state, State::ReadBodyContentLength(_, 10000)));
-    let event = Event::End(&mut cbuf);
     state = state.next(event).unwrap();
     assert!(matches!(state, State::End(_)));
     let response = state.into_frame().unwrap();
@@ -27,7 +24,7 @@ fn test_response_head() {
 }
 
 #[test]
-fn test_response_partial_headers() {
+fn test_response_message_head_multiple() {
     let input = "HTTP/1.1 200 OK\r\nDate: Mon, 18 Jul 2016 16:06:00 GMT\r\n";
     let mut buf = BytesMut::from(input);
     let mut cbuf = Cursor::new(&mut buf);
@@ -56,7 +53,7 @@ fn test_response_partial_headers() {
 }
 
 #[test]
-fn test_response_partial_headers_new() {
+fn test_response_message_head_multiple_2() {
     let chunks: &[&[u8]] = &[
         b"HTTP/1.1 200 OK\r\nDate: Mon, 18 Jul 2016 16:06:00 GMT\r\n",
         b"Server: Apache\r\n",
@@ -107,4 +104,18 @@ fn test_response_not_modified() {
                  X-Test: test\r\n\r\n";
     let response = parse_full_response(input.as_bytes());
     assert_eq!(response.status_code(), "304");
+}
+
+#[test]
+fn test_response_message_head_parital() {
+    let input = "HTTP/1.1 304 OK\r\n";
+    let mut buf = BytesMut::from(input.clone());
+    let mut cbuf = Cursor::new(&mut buf);
+    let event = Event::End(&mut cbuf);
+    let mut state: State<Response> = State::new();
+    if let Err(HttpReadError::Unparsed(buf)) = state.next(event) {
+        assert_eq!(buf, input);
+    } else {
+        panic!()
+    }
 }

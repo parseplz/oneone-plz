@@ -27,22 +27,14 @@ fn test_response_te_unknown() {
     let response = parse_full_response(input.as_bytes());
 }
 
-// #[test]
 // Fix: Body not parsed
-fn test_response_missing_cl_with_body() {
-    let input = "HTTP/1.1 200 OK\r\n\r\n\
-             HELLO WORLD";
-
-    let response = parse_full_response(input.as_bytes());
-    dbg!(response);
-}
 
 // #[test]
 // Fix: Body and Extra body not parsed
 fn test_response_missing_cl_with_extra_body() {
     let input = "HTTP/1.1 200 OK\r\n\r\n\
-             HELLO WORLD\n\
-             MORE DATA";
+                 HELLO WORLD\n\
+                 MORE DATA";
 
     let response = parse_full_response(input.as_bytes());
     dbg!(response);

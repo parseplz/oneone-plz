@@ -3,6 +3,7 @@ use crate::response::parse_full_response;
 use buffer_plz::{Cursor, Event};
 use bytes::BytesMut;
 use header_plz::info_line::{request::Request, response::Response};
+use oneone_plz::error::HttpReadError;
 use oneone_plz::{oneone::OneOne, state::State};
 
 use protocol_traits_plz::Frame;
@@ -122,7 +123,6 @@ fn test_response_cl_extra_multiple() {
     state = state.next(Event::Read(&mut cbuf)).unwrap();
     cbuf.as_mut().extend_from_slice(b"ello world more data");
     state = state.next(Event::End(&mut cbuf)).unwrap();
-
     let response = state.into_frame().unwrap();
     let verify = "HTTP/1.1 200 OK\r\n\
                   Content-Length: 21\r\n\r\n\
@@ -170,5 +170,103 @@ fn test_response_cl_extra_finished_read_end_multiple() {
     let verify = "HTTP/1.1 200 OK\r\n\
                   Content-Length: 27\r\n\r\n\
                   hello world more data added";
+    assert_eq!(response.into_data(), verify);
+}
+
+#[test]
+fn test_response_cl_partial_no_fix() {
+    let input = "HTTP/1.1 200 OK\r\n\
+                 Content-Length: 5\r\n\r\n\
+                 h";
+    let mut buf = BytesMut::from(input.as_bytes());
+    let mut cbuf = Cursor::new(&mut buf);
+    let mut state: State<Response> = State::new();
+    state = state.next(Event::Read(&mut cbuf)).unwrap();
+    let response = state.next(Event::End(&mut cbuf));
+    if let Err(e) = response {
+        assert!(matches!(e, HttpReadError::ContentLengthPartial(_, _)));
+        let verify = "HTTP/1.1 200 OK\r\n\
+                      Content-Length: 5\r\n\r\n\
+                      h";
+        assert_eq!(verify, BytesMut::from(e));
+    } else {
+        panic!()
+    }
+}
+
+#[test]
+fn test_response_cl_partial_fix() {
+    let input = "HTTP/1.1 200 OK\r\n\
+                 Content-Length: 5\r\n\r\n\
+                 h";
+    let mut buf = BytesMut::from(input.as_bytes());
+    let mut cbuf = Cursor::new(&mut buf);
+    let mut state: State<Response> = State::new();
+    state = state.next(Event::Read(&mut cbuf)).unwrap();
+    let response = state.next(Event::End(&mut cbuf));
+    if let Err(e) = response {
+        assert!(matches!(e, HttpReadError::ContentLengthPartial(_, _)));
+        let verify = "HTTP/1.1 200 OK\r\n\
+                      Content-Length: 1\r\n\r\n\
+                      h";
+        assert_eq!(verify, OneOne::<Response>::try_from(e).unwrap().into_data());
+    } else {
+        panic!()
+    }
+}
+
+#[test]
+fn test_response_cl_no_body_no_fix() {
+    let input = "HTTP/1.1 200 OK\r\n\
+                 Content-Length: 5\r\n\r\n";
+    let mut buf = BytesMut::from(input.as_bytes());
+    let mut cbuf = Cursor::new(&mut buf);
+    let mut state: State<Response> = State::new();
+    state = state.next(Event::Read(&mut cbuf)).unwrap();
+    let result = state.next(Event::End(&mut cbuf));
+    if let Err(e) = result {
+        matches!(e, HttpReadError::ContentLengthPartial(_, _));
+        let verify = "HTTP/1.1 200 OK\r\n\
+                      Content-Length: 5\r\n\r\n";
+        assert_eq!(verify, BytesMut::from(e));
+    } else {
+        panic!()
+    }
+}
+
+#[test]
+fn test_response_cl_no_body_fix() {
+    let input = "HTTP/1.1 200 OK\r\n\
+                 Content-Length: 5\r\n\r\n";
+    let mut buf = BytesMut::from(input.as_bytes());
+    let mut cbuf = Cursor::new(&mut buf);
+    let mut state: State<Response> = State::new();
+    state = state.next(Event::Read(&mut cbuf)).unwrap();
+    let result = state.next(Event::End(&mut cbuf));
+    if let Err(e) = result {
+        matches!(e, HttpReadError::ContentLengthPartial(_, _));
+        let verify = "HTTP/1.1 200 OK\r\n\
+                      Content-Length: 0\r\n\r\n";
+        assert_eq!(verify, OneOne::<Response>::try_from(e).unwrap().into_data());
+    } else {
+        panic!()
+    }
+}
+
+#[test]
+fn test_response_missing_cl_with_body() {
+    let input = "HTTP/1.1 200 OK\r\n\r\n\
+                 HELLO WORLD";
+
+    let mut buf = BytesMut::from(input);
+    let mut cbuf = Cursor::new(&mut buf);
+    let mut state: State<Response> = State::new();
+    state = state.next(Event::Read(&mut cbuf)).unwrap();
+    state = state.next(Event::End(&mut cbuf)).unwrap();
+    let response = state.into_frame().unwrap();
+    let verify = "HTTP/1.1 200 OK\r\n\
+                  Content-Length: 11\r\n\r\n\
+                  HELLO WORLD";
+
     assert_eq!(response.into_data(), verify);
 }

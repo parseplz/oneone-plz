@@ -29,8 +29,6 @@ use crate::oneone::OneOne;
  *      3. Remove their corresponding headers.
  *
  *      4. Update content length header.
- *          a. if header present, update it.
- *          b. else create it.
  */
 
 pub fn convert_one_dot_one_body<T>(mut one: OneOne<T>) -> Result<OneOne<T>, DecompressError>
@@ -70,24 +68,33 @@ where
             .remove_header_on_key(CONTENT_ENCODING);
     }
 
-    // 4. Update Cl
-    let len: String = body.len().to_string();
-
-    // 4.a. If cl present update cl
-    match one.has_header_key(CONTENT_LENGTH) {
-        Some(pos) => {
-            one.header_map_as_mut()
-                .change_header_value_on_pos(pos, &len);
-        }
-        None => {
-            // 4.b. else add new cl
-            let content_length_header = (CONTENT_LENGTH, len.as_str()).into();
-            one.header_map_as_mut().add_header(content_length_header);
-        }
+    // 4. Update Content-Length
+    if !body.is_empty() {
+        update_content_length(&mut one, body.len());
     }
 
     one.set_body(Body::Raw(body));
     Ok(one)
+}
+
+pub fn update_content_length<T>(one: &mut OneOne<T>, len: usize)
+where
+    T: InfoLine,
+    MessageHead<T>: ParseBodyHeaders,
+{
+    let len_string = len.to_string();
+    // 1. If cl present update cl
+    match one.has_header_key(CONTENT_LENGTH) {
+        Some(pos) => {
+            one.header_map_as_mut()
+                .change_header_value_on_pos(pos, &len_string);
+        }
+        None => {
+            // 2. else add new cl
+            let content_length_header = (CONTENT_LENGTH, len_string.as_str()).into();
+            one.header_map_as_mut().add_header(content_length_header);
+        }
+    }
 }
 
 #[cfg(test)]
@@ -97,7 +104,7 @@ mod test {
     use header_plz::info_line::{request::Request, response::Response};
     use protocol_traits_plz::{Frame, Step};
 
-    use crate::state::State;
+    use crate::{error::HttpReadError, state::State};
 
     use super::*;
 
@@ -131,17 +138,12 @@ mod test {
         }
     }
     #[test]
-    fn test_convert_modify_cl() {
+    fn test_convert_cl_partial() {
         let res = "HTTP/1.1 200 OK\r\n\
                    Host: reqbin.com\r\n\
                    Content-Type: text/plain\r\n\
                    Content-Length: 100\r\n\r\n\
-                   MozillaDeveloperNetwork";
-        let verify = "HTTP/1.1 200 OK\r\n\
-                      Host: reqbin.com\r\n\
-                      Content-Type: text/plain\r\n\
-                      Content-Length: 23\r\n\r\n\
-                      MozillaDeveloperNetwork";
+                   h";
 
         let mut buf: BytesMut = res.into();
         let mut cbuf = Cursor::new(&mut buf);
@@ -149,15 +151,13 @@ mod test {
         let event = Event::Read(&mut cbuf);
         state = state.next(event).unwrap();
         let event = Event::End(&mut cbuf);
-        state = state.next(event).unwrap();
-        match state {
-            State::End(_) => {
-                let data = state.into_frame().unwrap().into_data();
-                assert_eq!(data, verify);
-            }
-            _ => {
-                panic!()
-            }
+        let result = state.next(event);
+        if let Err(HttpReadError::ContentLengthPartial(oneone, buf)) = result {
+            let data = oneone.into_data();
+            assert_eq!(data, &res[..res.len() - 1]);
+            assert_eq!(buf, "h");
+        } else {
+            panic!()
         }
     }
 }
