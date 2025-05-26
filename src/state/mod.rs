@@ -123,42 +123,19 @@ where
                 Err(HttpReadError::Unparsed(buf.into_inner()))?
             }
 
-            /* ReadBodyContentLength(size) , Read
+            /* ReadBodyContentLength(size) , event
              *      match content_length_read(buf, size)
-             *          1. true =>  a. if no extra data, State::End
-             *                      b. else, State::ReadBodyContentLengthExtra
+             *      1. true =>  a. if no extra data, State::End
+             *                  b. else, match event
+             *                      1. Read =>
+             *                         State::ReadBodyContentLengthExtra
+             *                      2. End => call next on
+             *                              State::ReadBodyContentLengthExtra
              *
-             *          2. false =>  remain in same state.
+             *      2. false => match event
+             *                  a. Read => remain in same state
+             *                  b. End => Err(ContentLengthPartial)
              */
-
-            /*
-            (State::ReadBodyContentLength(mut oneone, mut size), Event::Read(buf)) => {
-                match read_content_length(buf, &mut size) {
-                    true => {
-                        oneone.set_body(Body::Raw(buf.split_at_current_pos()));
-                        if buf.len() > 0 {
-                            Ok(State::ReadBodyContentLengthExtra(oneone))
-                        } else {
-                            Ok(State::End(oneone))
-                        }
-                    }
-                    false => Ok(State::ReadBodyContentLength(oneone, size)),
-                }
-            } */
-
-            /* ReadBodyContentLength(size) , End [partial]
-             *      1. If data in buf, add it to request body, by calling
-             *         set_body()
-             *      2. Error with ContentLengthPartial
-             */
-            /*
-            (State::ReadBodyContentLength(mut oneone, mut size), Event::End(buf)) => {
-                if buf.len() > 0 {
-                    oneone.set_body(Body::Raw(buf.into_inner()));
-                }
-                Err(HttpReadError::ContentLengthPartial(oneone))?
-            }
-            */
             (State::ReadBodyContentLength(mut oneone, mut size), mut event) => match event {
                 Event::Read(ref mut buf) | Event::End(ref mut buf) => {
                     match read_content_length(buf, &mut size) {
