@@ -120,7 +120,9 @@ where
         if let Some(body) = self.body {
             match body {
                 Body::Raw(body) => header.unsplit(body),
-                Body::Chunked(items) => todo!(),
+                Body::Chunked(items) => {
+                    todo!()
+                }
             }
         }
         header

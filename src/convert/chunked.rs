@@ -1,7 +1,7 @@
 use crate::oneone::OneOne;
 use body_plz::variants::{
     Body,
-    chunked::{ChunkedBody, total_chunk_size},
+    chunked::{ChunkType, total_chunk_size, total_chunk_size_unchecked},
 };
 use bytes::BytesMut;
 
@@ -13,23 +13,23 @@ use header_plz::{
  *      Convert chunked body to content length.
  *
  * Steps:
- *      1. Combine ChunkedBody::Chunk into one body.
+ *      1. Combine ChunkType::Chunk into one body.
  *      2. If trailer is present,
  *          a. remove trailer header
  *          b. add trailer to header_map.
  */
 
-pub fn convert_chunked<T>(mut one: OneOne<T>, vec_body: Vec<ChunkedBody>) -> OneOne<T>
+pub fn convert_chunked<T>(mut one: OneOne<T>, vec_body: Vec<ChunkType>) -> OneOne<T>
 where
     T: InfoLine,
     MessageHead<T>: ParseBodyHeaders,
 {
     let mut new_body = BytesMut::with_capacity(total_chunk_size(&vec_body));
     vec_body.into_iter().for_each(|body| match body {
-        // 1. Combine ChunkedBody::Chunk into one body.
-        ChunkedBody::Chunk(data) => new_body.extend_from_slice(&data[..data.len() - 2]),
+        // 1. Combine ChunkType::Chunk into one body.
+        ChunkType::Chunk(data) => new_body.extend_from_slice(&data[..data.len() - 2]),
         // 2. If trailer is present,
-        ChunkedBody::Trailers(trailer) => {
+        ChunkType::Trailers(trailer) => {
             // 2.a. Remove trailer header
             one.header_map_as_mut().remove_header_on_key(TRAILER);
             // 2.b. Add trailer to header_map
@@ -38,7 +38,7 @@ where
                 .headers_as_mut()
                 .append(&mut trailer_header);
         }
-        ChunkedBody::Extra(data) => new_body.extend_from_slice(&data),
+        ChunkType::Extra(data) => new_body.extend_from_slice(&data),
         _ => {}
     });
     one.set_body(Body::Raw(new_body));
@@ -47,14 +47,15 @@ where
 
 pub fn convert_chunked_unchecked<T>(
     mut one: OneOne<T>,
-    vec_body: Vec<ChunkedBody>,
+    vec_body: Vec<ChunkType>,
     partial: Option<BytesMut>,
 ) -> OneOne<T>
 where
     T: InfoLine,
     MessageHead<T>: ParseBodyHeaders,
 {
-    let mut new_body = BytesMut::with_capacity(total_chunk_size(&vec_body));
+    let mut new_body = BytesMut::with_capacity(total_chunk_size_unchecked(&vec_body));
+    vec_body.into_iter().for_each(|body| todo!());
     todo!()
 }
 

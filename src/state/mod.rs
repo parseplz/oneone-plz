@@ -1,6 +1,6 @@
 use body_plz::{
-    reader::{chunked_reader::ChunkReader, content_length_reader::read_content_length},
-    variants::{Body, chunked::ChunkedBody},
+    reader::{chunked_reader::ChunkReaderState, content_length_reader::read_content_length},
+    variants::{Body, chunked::ChunkType},
 };
 use buffer_plz::Event;
 use bytes::BytesMut;
@@ -28,7 +28,7 @@ where
     ReadMessageHead,
     ReadBodyContentLength(OneOne<T>, usize),
     ReadBodyContentLengthExtra(OneOne<T>),
-    ReadBodyChunked(OneOne<T>, ChunkReader),
+    ReadBodyChunked(OneOne<T>, ChunkReaderState),
     ReadBodyChunkedExtra(OneOne<T>),
     ReadBodyClose(OneOne<T>),
     End(OneOne<T>),
@@ -76,7 +76,7 @@ where
                     }
                     TransferType::Chunked => {
                         one.set_body(Body::Chunked(Vec::new()));
-                        Self::ReadBodyChunked(one, ChunkReader::ReadSize)
+                        Self::ReadBodyChunked(one, ChunkReaderState::ReadSize)
                     }
                     TransferType::Close => Self::ReadBodyClose(one),
                     TransferType::Unknown => Self::End(one),
@@ -188,8 +188,8 @@ where
              *      2. if Some(chunk) is returned, add to body.
              *      3. match chunk_state
              *          a. LastChunk, check trailer header present
-             *              1. true     => ChunkReader::ReadTrailers
-             *              2. false    => ChunkReader::EndCRLF
+             *              1. true     => ChunkReaderState::ReadTrailers
+             *              2. false    => ChunkReaderState::EndCRLF
              *          b. End,
              *              1. if no extra data, State::End
              *              2. if extra data, State::ReadBodyChunkedExtra
@@ -202,22 +202,22 @@ where
                     Some(chunk_to_add) => {
                         oneone.body_as_mut().unwrap().push_chunk(chunk_to_add);
                         match chunk_state {
-                            ChunkReader::LastChunk => {
+                            ChunkReaderState::LastChunk => {
                                 chunk_state = if oneone.has_trailers() {
-                                    ChunkReader::ReadTrailers
+                                    ChunkReaderState::ReadTrailers
                                 } else {
-                                    ChunkReader::EndCRLF
+                                    ChunkReaderState::EndCRLF
                                 };
                                 continue;
                             }
-                            ChunkReader::End => {
+                            ChunkReaderState::End => {
                                 return if buf.len() > 0 {
                                     Ok(State::ReadBodyChunkedExtra(oneone))
                                 } else {
                                     Ok(State::End(oneone))
                                 };
                             }
-                            ChunkReader::Failed(e) => return Err(e.into()),
+                            ChunkReaderState::Failed(e) => return Err(e.into()),
                             _ => continue,
                         }
                     }
@@ -244,7 +244,7 @@ where
              *      2. transition to State::End
              */
             (State::ReadBodyChunkedExtra(mut oneone), Event::End(buf)) => {
-                let extra_chunk = ChunkedBody::Extra(buf.into_inner());
+                let extra_chunk = ChunkType::Extra(buf.into_inner());
                 oneone.body_as_mut().unwrap().push_chunk(extra_chunk);
                 Ok(State::End(oneone))
             }

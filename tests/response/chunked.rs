@@ -192,7 +192,7 @@ fn test_response_chunked_extra_finished_multiple() {
     assert_eq!(response.into_data(), verify);
 }
 
-// #[test]
+//#[test]
 fn test_chunked_partial() {
     let mut buf: BytesMut = "HTTP/1.1 200 OK\r\n\
                  Transfer-Encoding: chunked\r\n\r\n\
