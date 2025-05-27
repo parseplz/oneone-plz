@@ -1,6 +1,6 @@
 use body_plz::{
-    body_struct::{Body, ChunkedBody},
     reader::{chunked_reader::ChunkReader, content_length_reader::read_content_length},
+    variants::{Body, chunked::ChunkedBody},
 };
 use buffer_plz::Event;
 use bytes::BytesMut;
@@ -134,7 +134,7 @@ where
              *
              *      2. false => match event
              *                  a. Read => remain in same state
-             *                  b. End => Err(ContentLengthPartial)
+             *                  b. End => Err(ContentLengthPartial) [partial]
              */
             (State::ReadBodyContentLength(mut oneone, mut size), mut event) => match event {
                 Event::Read(ref mut buf) | Event::End(ref mut buf) => {
@@ -228,9 +228,9 @@ where
             },
 
             // Chunked , End [partial]
-            (State::ReadBodyChunked(..), Event::End(_)) => {
-                Err(HttpReadError::ChunkReaderNotEnoughData) // Partial ?
-            }
+            (State::ReadBodyChunked(mut oneone, chunked_state), Event::End(buf)) => Err(
+                HttpReadError::ChunkReaderNotEnoughData(oneone, buf.split_at_current_pos()),
+            ),
 
             /* ReadBodyChunkedExtra(OneOne<T>), Read
              *      remain in same state i.e. read until EOF is reached

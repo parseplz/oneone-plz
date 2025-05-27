@@ -1,4 +1,4 @@
-use body_plz::body_struct::Body;
+use body_plz::variants::Body;
 
 mod chunked;
 mod decompress;

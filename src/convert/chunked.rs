@@ -1,5 +1,8 @@
 use crate::oneone::OneOne;
-use body_plz::body_struct::{Body, ChunkedBody, total_chunk_size};
+use body_plz::variants::{
+    Body,
+    chunked::{ChunkedBody, total_chunk_size},
+};
 use bytes::BytesMut;
 
 use header_plz::{
@@ -40,6 +43,19 @@ where
     });
     one.set_body(Body::Raw(new_body));
     one
+}
+
+pub fn convert_chunked_unchecked<T>(
+    mut one: OneOne<T>,
+    vec_body: Vec<ChunkedBody>,
+    partial: Option<BytesMut>,
+) -> OneOne<T>
+where
+    T: InfoLine,
+    MessageHead<T>: ParseBodyHeaders,
+{
+    let mut new_body = BytesMut::with_capacity(total_chunk_size(&vec_body));
+    todo!()
 }
 
 #[cfg(test)]

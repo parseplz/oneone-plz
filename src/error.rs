@@ -1,4 +1,4 @@
-use body_plz::{body_struct::Body, reader::chunked_reader::ChunkReaderError};
+use body_plz::{reader::chunked_reader::ChunkReaderError, variants::Body};
 use bytes::BytesMut;
 use header_plz::{
     body_headers::parse::ParseBodyHeaders, error::HeaderReadError, info_line::InfoLine,
@@ -23,12 +23,8 @@ where
     Unparsed(BytesMut),
     #[error("partial| content length")]
     ContentLengthPartial(OneOne<T>, BytesMut),
-    //
     #[error("header not enough data")]
-    NChunkReaderNotEnoughData(OneOne<T>, BytesMut), // partial body
-    //
-    #[error("chunk reader not enough data")]
-    ChunkReaderNotEnoughData,
+    ChunkReaderNotEnoughData(OneOne<T>, BytesMut), // partial body
 }
 
 impl<T> From<HttpReadError<T>> for BytesMut
@@ -38,7 +34,9 @@ where
 {
     fn from(value: HttpReadError<T>) -> Self {
         match value {
-            HttpReadError::ContentLengthPartial(mut oneone, buf) => {
+            HttpReadError::Unparsed(buf) => buf,
+            HttpReadError::ContentLengthPartial(mut oneone, buf)
+            | HttpReadError::ChunkReaderNotEnoughData(mut oneone, buf) => {
                 let mut data = oneone.into_data();
                 data.unsplit(buf);
                 data
@@ -53,7 +51,7 @@ where
     T: InfoLine,
     MessageHead<T>: ParseBodyHeaders,
 {
-    type Error = Self;
+    type Error = HttpReadError<T>;
 
     fn try_from(value: HttpReadError<T>) -> Result<Self, Self::Error> {
         match value {
@@ -63,7 +61,7 @@ where
                 update_content_length(&mut oneone, len);
                 Ok(oneone)
             }
-            _ => todo!(),
+            _ => Err(value),
         }
     }
 }

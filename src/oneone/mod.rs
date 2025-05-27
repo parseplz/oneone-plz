@@ -1,4 +1,4 @@
-use body_plz::body_struct::Body;
+use body_plz::variants::Body;
 use bytes::BytesMut;
 use header_plz::{
     body_headers::{BodyHeader, parse::ParseBodyHeaders},
@@ -117,8 +117,11 @@ where
 {
     fn into_data(self) -> BytesMut {
         let mut header = self.message_head.into_data();
-        if let Some(Body::Raw(body)) = self.body {
-            header.unsplit(body);
+        if let Some(body) = self.body {
+            match body {
+                Body::Raw(body) => header.unsplit(body),
+                Body::Chunked(items) => todo!(),
+            }
         }
         header
     }

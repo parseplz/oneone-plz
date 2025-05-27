@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use body_plz::body_struct::Body;
+use body_plz::variants::Body;
 use header_plz::info_line::response::Response;
 
 use super::OneOne;
