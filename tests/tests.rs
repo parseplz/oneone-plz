@@ -46,21 +46,3 @@ where
     assert!(matches!(state, State::End(_)));
     state.into_frame().unwrap()
 }
-
-pub fn parse_extra<T>(input: &[&[u8]]) -> OneOne<T>
-where
-    T: InfoLine + std::fmt::Debug,
-    MessageHead<T>: ParseBodyHeaders,
-{
-    let mut buf = BytesMut::from(input[0]);
-    let mut cbuf = Cursor::new(&mut buf);
-    let mut state = poll_first(&mut cbuf);
-
-    for &chunk in &input[1..] {
-        cbuf.as_mut().extend_from_slice(chunk);
-        state = state.next(Event::Read(&mut cbuf)).unwrap();
-    }
-    state = state.next(Event::End(&mut cbuf)).unwrap();
-    assert!(matches!(state, State::End(_)));
-    state.into_frame().unwrap()
-}
