@@ -5,19 +5,15 @@ use oneone_plz::{error::HttpReadError, oneone::OneOne, state::State};
 use protocol_traits_plz::Frame;
 use protocol_traits_plz::Step;
 
-use super::parse_full_response;
+use crate::parse_full_multiple;
+use crate::parse_full_single;
 
 #[test]
 fn test_response_message_head_single() {
     let input = "HTTP/1.1 200 OK\r\n\
                  Value: 10000\r\n\r\n";
-    let mut buf = BytesMut::from(input);
-    let mut cbuf = Cursor::new(&mut buf);
-    let mut state: State<Response> = State::new();
-    let event = Event::Read(&mut cbuf);
-    state = state.next(event).unwrap();
-    assert!(matches!(state, State::End(_)));
-    let response = state.into_frame().unwrap();
+
+    let response = parse_full_single::<Response>(input.as_bytes());
     assert_eq!(response.status_code(), "200");
     let result = response.into_data();
     assert_eq!(result, input);
@@ -59,33 +55,20 @@ fn test_response_message_head_multiple_2() {
         b"Server: Apache\r\n",
         b"x-frame-options: DENY\r\n\r\n",
     ];
-    let mut buf = BytesMut::from(chunks[0]);
-    let mut cbuf = Cursor::new(&mut buf);
-    let mut state: State<Response> = State::new();
-
-    for &chunk in &chunks[1..] {
-        cbuf.as_mut().extend_from_slice(chunk);
-        state = state.next(Event::Read(&mut cbuf)).unwrap();
-    }
-
-    assert!(matches!(state, State::End(_)));
-
-    let response = state.into_frame().unwrap();
+    let response = parse_full_multiple::<Response>(chunks);
     assert_eq!(response.status_code(), "200");
-
     let expected = "\
         HTTP/1.1 200 OK\r\n\
         Date: Mon, 18 Jul 2016 16:06:00 GMT\r\n\
         Server: Apache\r\n\
         x-frame-options: DENY\r\n\r\n";
-
     assert_eq!(response.into_data(), expected);
 }
 
 #[test]
 fn test_response_no_content() {
     let input = "HTTP/1.1 204 OK\r\nX-Test: test\r\n\r\n";
-    let response = parse_full_response(input.as_bytes());
+    let response = parse_full_single::<Response>(input.as_bytes());
 }
 
 #[test]
@@ -93,8 +76,7 @@ fn test_response_switching_protocol() {
     let input = "HTTP/1.1 101 Switching Protocols\r\n\
         Upgrade: websocket\r\n\
         Connection: Upgrade\r\n\r\n";
-
-    let response = parse_full_response(input.as_bytes());
+    let response = parse_full_single::<Response>(input.as_bytes());
     assert_eq!(response.status_code(), "101");
 }
 
@@ -102,7 +84,7 @@ fn test_response_switching_protocol() {
 fn test_response_not_modified() {
     let input = "HTTP/1.1 304 OK\r\n\
                  X-Test: test\r\n\r\n";
-    let response = parse_full_response(input.as_bytes());
+    let response = parse_full_single::<Response>(input.as_bytes());
     assert_eq!(response.status_code(), "304");
 }
 

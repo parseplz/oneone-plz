@@ -1,4 +1,4 @@
-use crate::response::parse_full_response;
+use crate::{parse_full_single, poll_first};
 use buffer_plz::{Cursor, Event};
 use bytes::BytesMut;
 use header_plz::info_line::{request::Request, response::Response};
@@ -6,8 +6,6 @@ use oneone_plz::error::HttpReadError;
 use oneone_plz::{oneone::OneOne, state::State};
 use protocol_traits_plz::Frame;
 use protocol_traits_plz::Step;
-
-use super::poll_first;
 
 #[test]
 fn test_response_chunked_one() {
@@ -18,7 +16,7 @@ fn test_response_chunked_one() {
                  5\r\n\
                  world\r\n\
                  0\r\n\r\n";
-    let response = parse_full_response(input.as_bytes());
+    let response = parse_full_single::<Response>(input.as_bytes());
     let verify = "HTTP/1.1 200 OK\r\n\
                   Content-Length: 11\r\n\r\n\
                   hello world";
@@ -35,7 +33,8 @@ fn test_response_chunked_multiple() {
 
     let mut buf = BytesMut::from(chunks[0]);
     let mut cbuf = Cursor::new(&mut buf);
-    let mut state: State<Response> = State::new();
+    let mut state = poll_first::<Response>(&mut cbuf);
+    //let mut state: State<Response> = State::new();
 
     for &chunk in &chunks[1..] {
         state = state.next(Event::Read(&mut cbuf)).unwrap();
@@ -192,7 +191,7 @@ fn test_response_chunked_extra_finished_multiple() {
     assert_eq!(response.into_data(), verify);
 }
 
-//#[test]
+#[test]
 fn test_chunked_partial() {
     let mut buf: BytesMut = "HTTP/1.1 200 OK\r\n\
                  Transfer-Encoding: chunked\r\n\r\n\
@@ -203,7 +202,7 @@ fn test_chunked_partial() {
     let verify = buf.clone();
 
     let mut cbuf = Cursor::new(&mut buf);
-    let mut state = poll_first(&mut cbuf);
+    let mut state = poll_first::<Response>(&mut cbuf);
     if let Err(e) = state.next(Event::End(&mut cbuf)) {
         matches!(e, HttpReadError::ChunkReaderNotEnoughData(_, _));
         assert_eq!(verify, BytesMut::from(e));
