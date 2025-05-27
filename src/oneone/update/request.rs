@@ -19,8 +19,7 @@ impl UpdateHttp for OneOne<Request> {
             // If No content length header is present
             if req.has_header_key(CONTENT_LENGTH).is_none() {
                 // Add Content-Length of zero
-                let size = "0";
-                req.add_header(CONTENT_LENGTH, size);
+                req.add_header(CONTENT_LENGTH, "0");
             }
         }
         Ok(req)

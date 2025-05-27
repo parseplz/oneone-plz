@@ -15,7 +15,7 @@ use super::error::DecompressError;
  *      encoding.
  */
 
-pub fn decompress_data(
+pub fn decompress(
     mut data: BytesMut,
     encodings: &[ContentEncoding],
 ) -> Result<BytesMut, DecompressError> {

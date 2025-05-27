@@ -17,7 +17,7 @@ where
     #[error("header read| {0}")]
     InfoLine(#[from] HeaderReadError),
     #[error("chunkreader| {0}")]
-    ChunkReaderFailed(#[from] ChunkReaderError),
+    ChunkState(#[from] ChunkReaderError),
     // Partial
     #[error("partial| header")]
     Unparsed(BytesMut),

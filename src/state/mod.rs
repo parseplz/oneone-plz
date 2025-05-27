@@ -229,7 +229,7 @@ where
 
             // Chunked , End [partial]
             (State::ReadBodyChunked(mut oneone, chunked_state), Event::End(buf)) => Err(
-                HttpReadError::ChunkReaderNotEnoughData(oneone, buf.split_at_current_pos()),
+                HttpReadError::ChunkReaderNotEnoughData(oneone, buf.into_inner()),
             ),
 
             /* ReadBodyChunkedExtra(OneOne<T>), Read

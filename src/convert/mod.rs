@@ -1,6 +1,6 @@
 use body_plz::variants::Body;
 
-mod chunked;
+pub mod chunked;
 mod decompress;
 use chunked::convert_chunked;
 use decompress::*;
@@ -51,7 +51,7 @@ where
         ..
     }) = one.body_headers()
     {
-        body = decompress_data(body, encodings)?;
+        body = decompress(body, encodings)?;
         one.header_map_as_mut()
             .remove_header_on_key(TRANSFER_ENCODING);
     }
@@ -62,7 +62,7 @@ where
         ..
     }) = one.body_headers()
     {
-        body = decompress_data(body, encodings)?;
+        body = decompress(body, encodings)?;
         // 3. Remove Content-Encoding
         one.header_map_as_mut()
             .remove_header_on_key(CONTENT_ENCODING);
@@ -99,14 +99,12 @@ where
 
 #[cfg(test)]
 mod test {
+    use super::*;
+    use crate::{error::HttpReadError, state::State};
     use buffer_plz::{Cursor, Event};
     use bytes::BytesMut;
     use header_plz::info_line::{request::Request, response::Response};
     use protocol_traits_plz::{Frame, Step};
-
-    use crate::{error::HttpReadError, state::State};
-
-    use super::*;
 
     #[test]
     fn test_convert_no_cl() {
@@ -137,6 +135,7 @@ mod test {
             }
         }
     }
+
     #[test]
     fn test_convert_cl_partial() {
         let res = "HTTP/1.1 200 OK\r\n\

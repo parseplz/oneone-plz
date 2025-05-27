@@ -25,7 +25,7 @@ where
     MessageHead<T>: ParseBodyHeaders,
 {
     let mut new_body = BytesMut::with_capacity(total_chunk_size(&vec_body));
-    vec_body.into_iter().for_each(|body| match body {
+    vec_body.into_iter().for_each(|chunk| match chunk {
         // 1. Combine ChunkType::Chunk into one body.
         ChunkType::Chunk(data) => new_body.extend_from_slice(&data[..data.len() - 2]),
         // 2. If trailer is present,
@@ -45,18 +45,16 @@ where
     one
 }
 
-pub fn convert_chunked_unchecked<T>(
-    mut one: OneOne<T>,
-    vec_body: Vec<ChunkType>,
-    partial: Option<BytesMut>,
-) -> OneOne<T>
-where
-    T: InfoLine,
-    MessageHead<T>: ParseBodyHeaders,
-{
-    let mut new_body = BytesMut::with_capacity(total_chunk_size_unchecked(&vec_body));
-    vec_body.into_iter().for_each(|body| todo!());
-    todo!()
+// Partial chunked body
+pub fn convert_chunked_unchecked(mut vec_body: Vec<ChunkType>) -> Option<BytesMut> {
+    let mut iter = vec_body.into_iter().map(|c| c.into_data());
+    let mut body = iter.next()?;
+
+    for chunk in iter {
+        body.unsplit(chunk);
+    }
+
+    Some(body)
 }
 
 #[cfg(test)]
