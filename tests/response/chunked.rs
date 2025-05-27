@@ -2,9 +2,12 @@ use crate::response::parse_full_response;
 use buffer_plz::{Cursor, Event};
 use bytes::BytesMut;
 use header_plz::info_line::{request::Request, response::Response};
+use oneone_plz::error::HttpReadError;
 use oneone_plz::{oneone::OneOne, state::State};
 use protocol_traits_plz::Frame;
 use protocol_traits_plz::Step;
+
+use super::poll_first;
 
 #[test]
 fn test_response_chunked_one() {
@@ -187,4 +190,24 @@ fn test_response_chunked_extra_finished_multiple() {
                   Content-Length: 22\r\n\r\n\
                   hello extra data added";
     assert_eq!(response.into_data(), verify);
+}
+
+// #[test]
+fn test_chunked_partial() {
+    let mut buf: BytesMut = "HTTP/1.1 200 OK\r\n\
+                 Transfer-Encoding: chunked\r\n\r\n\
+                 6\r\n\
+                 hello \r\n\
+                 5"
+    .into();
+    let verify = buf.clone();
+
+    let mut cbuf = Cursor::new(&mut buf);
+    let mut state = poll_first(&mut cbuf);
+    if let Err(e) = state.next(Event::End(&mut cbuf)) {
+        matches!(e, HttpReadError::ChunkReaderNotEnoughData(_, _));
+        assert_eq!(verify, BytesMut::from(e));
+    } else {
+        panic!()
+    }
 }

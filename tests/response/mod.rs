@@ -13,11 +13,14 @@ mod transfer_encoding;
 pub fn parse_full_response(input: &[u8]) -> OneOne<Response> {
     let mut buf = BytesMut::from(input);
     let mut cbuf = Cursor::new(&mut buf);
-    let mut state: State<Response> = State::new();
-    let event = Event::Read(&mut cbuf);
-    state = state.next(event).unwrap();
+    let mut state = poll_first(&mut cbuf);
     assert!(matches!(state, State::End(_)));
     state.into_frame().unwrap()
+}
+
+pub fn poll_first(buf: &mut Cursor<'_>) -> State<Response> {
+    let mut state: State<Response> = State::new();
+    state.next(Event::Read(buf)).unwrap()
 }
 
 // #[test]
