@@ -1,7 +1,7 @@
-use std::io::Read;
+use std::io::{BufRead, BufReader, Read, copy};
 
 use brotli::Decompressor;
-use bytes::BytesMut;
+use bytes::{BufMut, BytesMut, buf::Writer};
 use flate2::bufread::{DeflateDecoder, GzDecoder};
 use header_plz::body_headers::content_encoding::ContentEncoding;
 
@@ -15,7 +15,7 @@ use super::error::DecompressError;
  *      encoding.
  */
 
-pub fn decompress(
+pub fn decompress_old(
     mut data: BytesMut,
     encodings: &[ContentEncoding],
 ) -> Result<BytesMut, DecompressError> {
@@ -24,9 +24,8 @@ pub fn decompress(
             ContentEncoding::Brotli => decompress_brotli(&data),
             ContentEncoding::Deflate => decompress_deflate(&data),
             ContentEncoding::Gzip => decompress_gzip(&data),
-            ContentEncoding::Zstd => decompress_zstd(&data),
             ContentEncoding::Identity | ContentEncoding::Chunked => continue,
-            ContentEncoding::Compress => decompress_zstd(&data),
+            ContentEncoding::Zstd | ContentEncoding::Compress => decompress_zstd(&data),
         }?;
         data.clear();
         data.reserve(result.len());
@@ -67,4 +66,52 @@ fn decompress_zstd(data: &[u8]) -> Result<Vec<u8>, DecompressError> {
         .read_to_end(&mut buf)
         .map_err(DecompressError::Zstd)?;
     Ok(buf)
+}
+
+//////////////
+
+fn decompress_brotli_new(
+    data: &[u8],
+    writer: &mut Writer<BytesMut>,
+) -> Result<u64, DecompressError> {
+    let mut reader = Decompressor::new(data, data.len());
+    copy(&mut reader, writer).map_err(DecompressError::Brotli)
+}
+
+fn decompress_deflate_new(
+    data: &[u8],
+    writer: &mut Writer<BytesMut>,
+) -> Result<u64, DecompressError> {
+    let mut reader = DeflateDecoder::new(data);
+    copy(&mut reader, writer).map_err(DecompressError::Deflate)
+}
+
+fn decompress_gzip_new(data: &[u8], writer: &mut Writer<BytesMut>) -> Result<u64, DecompressError> {
+    let mut reader = GzDecoder::new(data);
+    copy(&mut reader, writer).map_err(DecompressError::Gzip)
+}
+
+fn decompress_zstd_new(data: &[u8], writer: &mut Writer<BytesMut>) -> Result<u64, DecompressError> {
+    let mut reader = zstd::stream::read::Decoder::new(data).map_err(DecompressError::Zstd)?;
+    copy(&mut reader, writer).map_err(DecompressError::Zstd)
+}
+
+pub fn decompress(
+    mut data: BytesMut,
+    encodings: &[ContentEncoding],
+) -> Result<BytesMut, DecompressError> {
+    let mut result = BytesMut::with_capacity(data.len() * 2);
+    let mut writer = result.writer();
+    for encoding in encodings {
+        match encoding {
+            ContentEncoding::Brotli => decompress_brotli_new(&data[..], &mut writer),
+            ContentEncoding::Gzip => decompress_gzip_new(&data, &mut writer),
+            ContentEncoding::Deflate => decompress_deflate_new(&data, &mut writer),
+            ContentEncoding::Identity | ContentEncoding::Chunked => continue,
+            ContentEncoding::Zstd | ContentEncoding::Compress => {
+                decompress_zstd_new(&data, &mut writer)
+            }
+        }?;
+    }
+    Ok(writer.into_inner())
 }
