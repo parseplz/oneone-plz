@@ -14,7 +14,7 @@ use header_plz::{
 use protocol_traits_plz::Step;
 
 use crate::{
-    convert::{convert_one_dot_one_body, error::DecompressError},
+    convert::{chunked::chunked_to_raw, convert_body, error::DecompressError},
     error::HttpReadError,
     oneone::OneOne,
 };
@@ -32,6 +32,8 @@ where
     ReadBodyChunkedExtra(OneOne<T>),
     ReadBodyClose(OneOne<T>),
     End(OneOne<T>),
+    ReadBodyContentLengthExtraEnd(OneOne<T>, BytesMut),
+    ReadBodyChunkedExtraEnd(OneOne<T>, BytesMut),
 }
 
 impl<T> State<T>
@@ -98,14 +100,6 @@ where
 
     fn next(mut self, event: Event) -> Result<Self, Self::StateError> {
         match (self, event) {
-            /* ReadHeader , Read
-             *      a. if read_header() is true,
-             *          1. split buf at current position to get raw headers.
-             *          2. Build OneOne
-             *          3. if there is remaining data in buf, call next() with
-             *         remaining data.
-             *      b. false, remain in same state.
-             */
             (State::ReadMessageHead, Event::Read(buf)) => match find_message_head_end(buf) {
                 true => {
                     let raw_headers = buf.split_at_current_pos();
@@ -117,25 +111,9 @@ where
                 }
                 false => Ok(Self::ReadMessageHead),
             },
-
-            // ReadHeader , End -> Failed [partial]
             (State::ReadMessageHead, Event::End(buf)) => {
                 Err(HttpReadError::Unparsed(buf.into_inner()))?
             }
-
-            /* ReadBodyContentLength(size) , event
-             *      match content_length_read(buf, size)
-             *      1. true =>  a. if no extra data, State::End
-             *                  b. else, match event
-             *                      1. Read =>
-             *                         State::ReadBodyContentLengthExtra
-             *                      2. End => call next on
-             *                              State::ReadBodyContentLengthExtra
-             *
-             *      2. false => match event
-             *                  a. Read => remain in same state
-             *                  b. End => Err(ContentLengthPartial) [partial]
-             */
             (State::ReadBodyContentLength(mut oneone, mut size), mut event) => match event {
                 Event::Read(ref mut buf) | Event::End(ref mut buf) => {
                     match read_content_length(buf, &mut size) {
@@ -161,42 +139,13 @@ where
                     }
                 }
             },
-
-            /* ReadBodyContentLengthExtra(oneone), Read
-             *      i.e.More data than needed
-             *      remain in same state i.e. read until EOF is reached
-             */
             (State::ReadBodyContentLengthExtra(oneone), Event::Read(_)) => {
                 Ok(State::ReadBodyContentLengthExtra(oneone))
             }
-
-            /* ReadBodyContentLengthExtra(oneone), End
-             *      1. add extra data to body
-             *      2. transition to State::End
-             */
             (State::ReadBodyContentLengthExtra(mut oneone), Event::End(buf)) => {
                 let extra_body = buf.into_inner();
-                if let Some(Body::Raw(raw)) = oneone.body_as_mut() {
-                    raw.unsplit(extra_body);
-                } else {
-                    oneone.set_body(Body::Raw(extra_body));
-                }
-                Ok(State::End(oneone))
+                Ok(State::ReadBodyContentLengthExtraEnd(oneone, extra_body))
             }
-            /* Chunked , Read
-             *      1. Call next() on chunk_state with buf
-             *      2. if Some(chunk) is returned, add to body.
-             *      3. match chunk_state
-             *          a. LastChunk, check trailer header present
-             *              1. true     => ChunkReaderState::ReadTrailers
-             *              2. false    => ChunkReaderState::EndCRLF
-             *          b. End,
-             *              1. if no extra data, State::End
-             *              2. if extra data, State::ReadBodyChunkedExtra
-             *          c. Failed, State::Failed
-             *          d. other states, continue
-             *      4. if None, remain in same state.
-             */
             (State::ReadBodyChunked(mut oneone, mut chunk_state), Event::Read(buf)) => loop {
                 match chunk_state.next(buf) {
                     Some(chunk_to_add) => {
@@ -226,54 +175,21 @@ where
                     }
                 }
             },
-
-            // Chunked , End [partial]
             (State::ReadBodyChunked(mut oneone, chunked_state), Event::End(buf)) => Err(
                 HttpReadError::ChunkReaderNotEnoughData(oneone, buf.into_inner()),
             ),
-
-            /* ReadBodyChunkedExtra(OneOne<T>), Read
-             *      remain in same state i.e. read until EOF is reached
-             */
             (State::ReadBodyChunkedExtra(oneone), Event::Read(_)) => {
                 Ok(State::ReadBodyChunkedExtra(oneone))
             }
-
-            /* ReadBodyChunkedExtra(OneOne<T>), End => End
-             *      1. add extra data to body
-             *      2. transition to State::End
-             */
             (State::ReadBodyChunkedExtra(mut oneone), Event::End(buf)) => {
-                let extra_chunk = ChunkType::Extra(buf.into_inner());
-                oneone.body_as_mut().unwrap().push_chunk(extra_chunk);
-                Ok(State::End(oneone))
+                let extra_body = buf.into_inner();
+                Ok(State::ReadBodyChunkedExtraEnd(oneone, extra_body))
             }
-
-            /* ReadBodyClose, Read => State::ReadBodyClose
-             *      1. Remain in same state.
-             *      2. Read until Event::End
-             */
             (State::ReadBodyClose(oneone), Event::Read(_)) => Ok(Self::ReadBodyClose(oneone)),
-
-            /* ReadBodyClose, End => State::End
-             *      Split the buf until filled and set the body to Raw
-             */
             (State::ReadBodyClose(mut oneone), Event::End(buf)) => {
                 oneone.set_body(Body::Raw(buf.into_inner()));
                 Ok(State::End(oneone))
             }
-
-            /* End, Event - extra data after parsing completed
-             *      1. match body
-             *          a. None                 => State::ReadBodyClose
-             *          b. Some(Body::Raw)      => State::ReadBodyContentLengthExtra
-             *          c. Some(Body::Chunked)  => State::ReadBodyChunkedExtra
-             *
-             *      2. match event
-             *          a. Read => above selected state
-             *          b. End  => call next() again to transition to End from
-             *                     the above selected state
-             */
             (State::End(oneone), event) => {
                 self = match oneone.body() {
                     None => State::ReadBodyClose(oneone),
@@ -285,11 +201,15 @@ where
                     Event::End(_) => self.next(event),
                 }
             }
+            (State::ReadBodyContentLengthExtraEnd(..), _)
+            | (State::ReadBodyChunkedExtraEnd(..), _) => unreachable!("not possible"),
         }
     }
 
     fn is_ended(&self) -> bool {
         matches!(self, Self::End(_))
+            | matches!(self, State::ReadBodyContentLengthExtraEnd(..))
+            | matches!(self, State::ReadBodyChunkedExtraEnd(..))
     }
 
     /* Description:
@@ -308,7 +228,7 @@ where
     fn into_frame(self) -> Result<OneOne<T>, DecompressError> {
         if let Self::End(mut one) = self {
             if one.body().is_some() {
-                one = convert_one_dot_one_body(one)?;
+                one = convert_body(one)?;
             }
             if let Some(pos) = one.has_connection_keep_alive() {
                 one.header_map_as_mut()
@@ -321,6 +241,41 @@ where
             return Ok(one);
         }
         unreachable!();
+    }
+}
+
+impl<T> TryFrom<State<T>> for OneOne<T>
+where
+    T: InfoLine,
+    MessageHead<T>: ParseBodyHeaders,
+{
+    type Error = DecompressError;
+
+    fn try_from(value: State<T>) -> Result<Self, Self::Error> {
+        let mut one = match value {
+            State::End(mut one) => {
+                if one.body().is_some() {
+                    one = convert_body(one)?;
+                }
+                one
+            }
+            State::ReadBodyContentLengthExtraEnd(mut one, extra) => {
+                one = chunked_to_raw(one);
+                todo!()
+            }
+            State::ReadBodyChunkedExtraEnd(mut one, extra) => todo!(),
+            _ => unreachable!(),
+        };
+
+        if let Some(pos) = one.has_connection_keep_alive() {
+            one.header_map_as_mut()
+                .change_header_value_on_pos(pos, CLOSE);
+        }
+        if let Some(pos) = one.has_proxy_connection() {
+            one.header_map_as_mut().remove_header_on_pos(pos);
+        }
+        one.header_map_as_mut().remove_header_on_key(WS_EXT);
+        Ok(one)
     }
 }
 

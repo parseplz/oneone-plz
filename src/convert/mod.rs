@@ -1,8 +1,9 @@
 use body_plz::variants::Body;
+use bytes::BytesMut;
 
 pub mod chunked;
 mod decompress;
-use chunked::convert_chunked;
+use chunked::chunked_to_raw;
 use decompress::*;
 pub mod error;
 use error::*;
@@ -31,17 +32,14 @@ use crate::oneone::OneOne;
  *      4. Update content length header.
  */
 
-pub fn convert_one_dot_one_body<T>(mut one: OneOne<T>) -> Result<OneOne<T>, DecompressError>
+pub fn convert_body<T>(mut one: OneOne<T>) -> Result<OneOne<T>, DecompressError>
 where
     T: InfoLine,
     MessageHead<T>: ParseBodyHeaders,
 {
     // 1. If chunked body convert chunked to CL
     if let Some(Body::Chunked(_)) = one.body() {
-        let body = one.get_body().into_chunks();
-        one = convert_chunked(one, body);
-        one.header_map_as_mut()
-            .remove_header_on_key(TRANSFER_ENCODING);
+        one = chunked_to_raw(one);
     }
     let mut body = one.get_body().into_data().unwrap();
 
@@ -52,9 +50,9 @@ where
     }) = one.body_headers()
     {
         body = decompress(body, encodings)?;
-        one.header_map_as_mut()
-            .remove_header_on_key(TRANSFER_ENCODING);
     }
+    one.header_map_as_mut()
+        .remove_header_on_key(TRANSFER_ENCODING);
 
     // 2. Content Encoding
     if let Some(BodyHeader {
@@ -95,6 +93,28 @@ where
             one.header_map_as_mut().add_header(content_length_header);
         }
     }
+}
+
+pub fn convert_body_extra<T>(
+    mut one: OneOne<T>,
+    mut extra: BytesMut,
+) -> Result<OneOne<T>, DecompressError>
+where
+    T: InfoLine,
+    MessageHead<T>: ParseBodyHeaders,
+{
+    // Try decoding extra
+    if let Some(BodyHeader {
+        transfer_encoding: Some(encodings),
+        ..
+    }) = one.body_headers()
+    {
+        match decompress(extra, encodings) {
+            Ok(data) => extra = data,
+            Err(_) => todo!(),
+        }
+    }
+    todo!()
 }
 
 #[cfg(test)]

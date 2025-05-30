@@ -24,7 +24,7 @@ where
     #[error("partial| content length")]
     ContentLengthPartial(OneOne<T>, BytesMut),
     #[error("header not enough data")]
-    ChunkReaderNotEnoughData(OneOne<T>, BytesMut), // partial body
+    ChunkReaderNotEnoughData(OneOne<T>, BytesMut),
 }
 
 impl<T> From<HttpReadError<T>> for BytesMut

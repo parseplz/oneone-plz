@@ -19,13 +19,14 @@ use header_plz::{
  *          b. add trailer to header_map.
  */
 
-pub fn convert_chunked<T>(mut one: OneOne<T>, vec_body: Vec<ChunkType>) -> OneOne<T>
+pub fn chunked_to_raw<T>(mut one: OneOne<T>) -> OneOne<T>
 where
     T: InfoLine,
     MessageHead<T>: ParseBodyHeaders,
 {
-    let mut new_body = BytesMut::with_capacity(total_chunk_size(&vec_body));
-    vec_body.into_iter().for_each(|chunk| match chunk {
+    let body = one.get_body().into_chunks();
+    let mut new_body = BytesMut::with_capacity(total_chunk_size(&body));
+    body.into_iter().for_each(|chunk| match chunk {
         // 1. Combine ChunkType::Chunk into one body.
         ChunkType::Chunk(data) => new_body.extend_from_slice(&data[..data.len() - 2]),
         // 2. If trailer is present,
