@@ -7,7 +7,7 @@ use header_plz::{
 use protocol_traits_plz::Frame;
 use thiserror::Error;
 
-use crate::{convert::update_content_length, oneone::OneOne};
+use crate::{convert::content_length::update_content_length, oneone::OneOne};
 
 #[derive(Debug, Error)]
 pub enum HttpReadError<T>
@@ -35,8 +35,8 @@ where
     fn from(value: HttpReadError<T>) -> Self {
         match value {
             HttpReadError::Unparsed(buf) => buf,
-            HttpReadError::ContentLengthPartial(mut oneone, buf)
-            | HttpReadError::ChunkReaderNotEnoughData(mut oneone, buf) => {
+            HttpReadError::ContentLengthPartial(oneone, buf)
+            | HttpReadError::ChunkReaderNotEnoughData(oneone, buf) => {
                 let mut data = oneone.into_data();
                 data.unsplit(buf);
                 data

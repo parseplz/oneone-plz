@@ -1,6 +1,6 @@
 use body_plz::{
     reader::{chunked_reader::ChunkReaderState, content_length_reader::read_content_length},
-    variants::{Body, chunked::ChunkType},
+    variants::Body,
 };
 use buffer_plz::Event;
 use bytes::BytesMut;
@@ -142,7 +142,7 @@ where
             (State::ReadBodyContentLengthExtra(oneone), Event::Read(_)) => {
                 Ok(State::ReadBodyContentLengthExtra(oneone))
             }
-            (State::ReadBodyContentLengthExtra(mut oneone), Event::End(buf)) => {
+            (State::ReadBodyContentLengthExtra(oneone), Event::End(buf)) => {
                 let extra_body = buf.into_inner();
                 Ok(State::ReadBodyContentLengthExtraEnd(oneone, extra_body))
             }
@@ -175,13 +175,13 @@ where
                     }
                 }
             },
-            (State::ReadBodyChunked(mut oneone, chunked_state), Event::End(buf)) => Err(
+            (State::ReadBodyChunked(oneone, _), Event::End(buf)) => Err(
                 HttpReadError::ChunkReaderNotEnoughData(oneone, buf.into_inner()),
             ),
             (State::ReadBodyChunkedExtra(oneone), Event::Read(_)) => {
                 Ok(State::ReadBodyChunkedExtra(oneone))
             }
-            (State::ReadBodyChunkedExtra(mut oneone), Event::End(buf)) => {
+            (State::ReadBodyChunkedExtra(oneone), Event::End(buf)) => {
                 let extra_body = buf.into_inner();
                 Ok(State::ReadBodyChunkedExtraEnd(oneone, extra_body))
             }
@@ -228,7 +228,7 @@ where
     fn into_frame(self) -> Result<OneOne<T>, DecompressError> {
         if let Self::End(mut one) = self {
             if one.body().is_some() {
-                one = convert_body(one)?;
+                one = convert_body(one, None)?;
             }
             if let Some(pos) = one.has_connection_keep_alive() {
                 one.header_map_as_mut()
@@ -255,7 +255,7 @@ where
         let mut one = match value {
             State::End(mut one) => {
                 if one.body().is_some() {
-                    one = convert_body(one)?;
+                    one = convert_body(one, None)?;
                 }
                 one
             }

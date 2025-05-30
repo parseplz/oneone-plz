@@ -1,15 +1,17 @@
 use body_plz::variants::Body;
 use bytes::BytesMut;
+pub mod content_length;
 
 pub mod chunked;
 mod decompress;
 use chunked::chunked_to_raw;
+use content_length::update_content_length;
 use decompress::*;
 pub mod error;
 use error::*;
 use header_plz::{
     body_headers::{BodyHeader, parse::ParseBodyHeaders},
-    const_headers::{CONTENT_ENCODING, CONTENT_LENGTH, TRANSFER_ENCODING},
+    const_headers::{CONTENT_ENCODING, TRANSFER_ENCODING},
     info_line::InfoLine,
     message_head::MessageHead,
 };
@@ -32,11 +34,15 @@ use crate::oneone::OneOne;
  *      4. Update content length header.
  */
 
-pub fn convert_body<T>(mut one: OneOne<T>) -> Result<OneOne<T>, DecompressError>
+pub fn convert_body<T>(
+    mut one: OneOne<T>,
+    extra_body: Option<BytesMut>,
+) -> Result<OneOne<T>, DecompressError>
 where
     T: InfoLine,
     MessageHead<T>: ParseBodyHeaders,
 {
+    let extra_body = None;
     // 1. If chunked body convert chunked to CL
     if let Some(Body::Chunked(_)) = one.body() {
         one = chunked_to_raw(one);
@@ -49,7 +55,7 @@ where
         ..
     }) = one.body_headers()
     {
-        body = decompress(body, encodings)?;
+        body = decompress_body(body, extra_body.clone(), encodings)?;
     }
     one.header_map_as_mut()
         .remove_header_on_key(TRANSFER_ENCODING);
@@ -60,7 +66,7 @@ where
         ..
     }) = one.body_headers()
     {
-        body = decompress(body, encodings)?;
+        body = decompress_body(body, extra_body, encodings)?;
         // 3. Remove Content-Encoding
         one.header_map_as_mut()
             .remove_header_on_key(CONTENT_ENCODING);
@@ -75,55 +81,12 @@ where
     Ok(one)
 }
 
-pub fn update_content_length<T>(one: &mut OneOne<T>, len: usize)
-where
-    T: InfoLine,
-    MessageHead<T>: ParseBodyHeaders,
-{
-    let len_string = len.to_string();
-    // 1. If cl present update cl
-    match one.has_header_key(CONTENT_LENGTH) {
-        Some(pos) => {
-            one.header_map_as_mut()
-                .change_header_value_on_pos(pos, &len_string);
-        }
-        None => {
-            // 2. else add new cl
-            let content_length_header = (CONTENT_LENGTH, len_string.as_str()).into();
-            one.header_map_as_mut().add_header(content_length_header);
-        }
-    }
-}
-
-pub fn convert_body_extra<T>(
-    mut one: OneOne<T>,
-    mut extra: BytesMut,
-) -> Result<OneOne<T>, DecompressError>
-where
-    T: InfoLine,
-    MessageHead<T>: ParseBodyHeaders,
-{
-    // Try decoding extra
-    if let Some(BodyHeader {
-        transfer_encoding: Some(encodings),
-        ..
-    }) = one.body_headers()
-    {
-        match decompress(extra, encodings) {
-            Ok(data) => extra = data,
-            Err(_) => todo!(),
-        }
-    }
-    todo!()
-}
-
 #[cfg(test)]
 mod test {
-    use super::*;
     use crate::{error::HttpReadError, state::State};
     use buffer_plz::{Cursor, Event};
     use bytes::BytesMut;
-    use header_plz::info_line::{request::Request, response::Response};
+    use header_plz::info_line::response::Response;
     use protocol_traits_plz::{Frame, Step};
 
     #[test]
