@@ -43,6 +43,6 @@ where
         state = state.next(Event::Read(&mut cbuf)).unwrap();
     }
     state = state.next(Event::End(&mut cbuf)).unwrap();
-    assert!(matches!(state, State::End(_)));
+    assert!(state.is_ended());
     state.into_frame().unwrap()
 }

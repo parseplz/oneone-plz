@@ -10,7 +10,7 @@ use header_plz::{
 };
 use protocol_traits_plz::Frame;
 
-use crate::convert::chunked::convert_chunked_unchecked;
+use crate::convert::chunked::partial_chunked_to_raw;
 
 mod request;
 mod response;
@@ -122,7 +122,7 @@ where
         if let Some(body) = self.body {
             let body = match body {
                 Body::Raw(body) => body,
-                Body::Chunked(items) => convert_chunked_unchecked(items).unwrap_or_default(),
+                Body::Chunked(items) => partial_chunked_to_raw(items).unwrap_or_default(),
             };
             header.unsplit(body);
         }

@@ -100,7 +100,7 @@ fn test_response_chunked_extra_single() {
     state = state.next(event).unwrap();
     let event = Event::End(&mut cbuf);
     state = state.next(event).unwrap();
-    assert!(matches!(state, State::End(_)));
+    assert!(matches!(state, State::ReadBodyChunkedExtraEnd(..)));
     let response = state.into_frame().unwrap();
     let verify = "HTTP/1.1 200 OK\r\n\
                   Content-Length: 22\r\n\r\n\

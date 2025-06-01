@@ -58,20 +58,6 @@ fn test_response_content_length_gzip() {
     assert_eq!(response.into_data(), verify);
 }
 
-// #[test]
-// FIX: corrupt deflate stream
-fn test_response_content_length_deflate() {
-    let input = b"HTTP/1.1 200 OK\r\n\
-                Content-Length: 29\r\n\
-                Content-Encoding: deflate\r\n\r\n\
-                \x78\x9c\x05\x80\x41\x09\x00\x00\x08\xc4\xaa\x18\x4e\xc1\xc7\xe0\xc0\x8f\xf5\xc7\x0e\xa4\x3e\x47\x0b\x1a\x0b\x04\x5d";
-    let response = parse_full_single::<Response>(input);
-    let verify = "HTTP/1.1 200 OK\r\n\
-                  Content-Length: 11\r\n\r\n\
-                  hello world";
-    assert_eq!(response.into_data(), verify);
-}
-
 #[test]
 fn test_response_content_length_zstd() {
     let input = b"HTTP/1.1 200 OK\r\n\
@@ -103,7 +89,6 @@ fn test_response_cl_extra_single() {
     let mut cbuf = Cursor::new(&mut buf);
     let mut state = poll_first::<Response>(&mut cbuf);
     state = state.next(Event::End(&mut cbuf)).unwrap();
-
     let response = state.into_frame().unwrap();
     let verify = "HTTP/1.1 200 OK\r\n\
                   Content-Length: 21\r\n\r\n\

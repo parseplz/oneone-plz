@@ -47,7 +47,7 @@ where
 }
 
 // Partial chunked body
-pub fn convert_chunked_unchecked(vec_body: Vec<ChunkType>) -> Option<BytesMut> {
+pub fn partial_chunked_to_raw(vec_body: Vec<ChunkType>) -> Option<BytesMut> {
     let mut iter = vec_body.into_iter().map(|c| c.into_data());
     let mut body = iter.next()?;
 

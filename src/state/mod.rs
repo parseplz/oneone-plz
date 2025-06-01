@@ -14,7 +14,7 @@ use header_plz::{
 use protocol_traits_plz::Step;
 
 use crate::{
-    convert::{chunked::chunked_to_raw, convert_body, error::DecompressError},
+    convert::{chunked::chunked_to_raw, convert_body, decompress::DecompressError},
     error::HttpReadError,
     oneone::OneOne,
 };
@@ -226,21 +226,22 @@ where
      */
 
     fn into_frame(self) -> Result<OneOne<T>, DecompressError> {
-        if let Self::End(mut one) = self {
-            if one.body().is_some() {
-                one = convert_body(one, None)?;
-            }
-            if let Some(pos) = one.has_connection_keep_alive() {
-                one.header_map_as_mut()
-                    .change_header_value_on_pos(pos, CLOSE);
-            }
-            if let Some(pos) = one.has_proxy_connection() {
-                one.header_map_as_mut().remove_header_on_pos(pos);
-            }
-            one.header_map_as_mut().remove_header_on_key(WS_EXT);
-            return Ok(one);
-        }
-        unreachable!();
+        OneOne::<T>::try_from(self)
+        //if let Self::End(mut one) = self {
+        //    if one.body().is_some() {
+        //        one = convert_body(one, None)?;
+        //    }
+        //    if let Some(pos) = one.has_connection_keep_alive() {
+        //        one.header_map_as_mut()
+        //            .change_header_value_on_pos(pos, CLOSE);
+        //    }
+        //    if let Some(pos) = one.has_proxy_connection() {
+        //        one.header_map_as_mut().remove_header_on_pos(pos);
+        //    }
+        //    one.header_map_as_mut().remove_header_on_key(WS_EXT);
+        //    return Ok(one);
+        //}
+        //unreachable!();
     }
 }
 
@@ -259,11 +260,12 @@ where
                 }
                 one
             }
-            State::ReadBodyContentLengthExtraEnd(mut one, extra) => {
+            State::ReadBodyContentLengthExtraEnd(mut one, extra) => convert_body(one, Some(extra))?,
+            State::ReadBodyChunkedExtraEnd(mut one, extra) => {
                 one = chunked_to_raw(one);
-                todo!()
+                one = convert_body(one, Some(extra))?;
+                one
             }
-            State::ReadBodyChunkedExtraEnd(mut one, extra) => todo!(),
             _ => unreachable!(),
         };
 

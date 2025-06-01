@@ -3,12 +3,10 @@ use bytes::BytesMut;
 pub mod content_length;
 
 pub mod chunked;
-mod decompress;
+pub mod decompress;
 use chunked::chunked_to_raw;
 use content_length::update_content_length;
 use decompress::*;
-pub mod error;
-use error::*;
 use header_plz::{
     body_headers::{BodyHeader, parse::ParseBodyHeaders},
     const_headers::{CONTENT_ENCODING, TRANSFER_ENCODING},
@@ -36,13 +34,12 @@ use crate::oneone::OneOne;
 
 pub fn convert_body<T>(
     mut one: OneOne<T>,
-    extra_body: Option<BytesMut>,
+    mut extra_body: Option<BytesMut>,
 ) -> Result<OneOne<T>, DecompressError>
 where
     T: InfoLine,
     MessageHead<T>: ParseBodyHeaders,
 {
-    let extra_body = None;
     // 1. If chunked body convert chunked to CL
     if let Some(Body::Chunked(_)) = one.body() {
         one = chunked_to_raw(one);
@@ -55,7 +52,7 @@ where
         ..
     }) = one.body_headers()
     {
-        body = decompress_body(body, extra_body.clone(), encodings)?;
+        body = decompress_body(body, extra_body.take(), encodings)?;
     }
     one.header_map_as_mut()
         .remove_header_on_key(TRANSFER_ENCODING);
@@ -66,10 +63,14 @@ where
         ..
     }) = one.body_headers()
     {
-        body = decompress_body(body, extra_body, encodings)?;
+        body = decompress_body(body, extra_body.take(), encodings)?;
         // 3. Remove Content-Encoding
         one.header_map_as_mut()
             .remove_header_on_key(CONTENT_ENCODING);
+    }
+
+    if let Some(extra) = extra_body {
+        body.unsplit(extra);
     }
 
     // 4. Update Content-Length
