@@ -136,7 +136,7 @@ where
     type Error = HeaderReadError;
 
     fn try_from(buf: BytesMut) -> Result<Self, Self::Error> {
-        let message_head = MessageHead::<T>::new(buf)?;
+        let message_head = MessageHead::<T>::try_from(buf)?;
         let body_headers = message_head.parse_body_headers();
         Ok(OneOne::<T>::new(message_head, body_headers))
     }
