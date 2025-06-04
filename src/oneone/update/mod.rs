@@ -44,7 +44,7 @@ where
         .position(|window| window == HEADER_DELIMITER)
         .ok_or(UpdateFrameError::UnableToFindCRLF)?;
     let raw_header = buf.split_to(index + HEADER_DELIMITER.len());
-    let mut one: OneOne<T> = OneOne::new(raw_header)?;
+    let mut one: OneOne<T> = OneOne::try_from(raw_header)?;
     // 4. Body is present
     if !buf.is_empty() {
         let len = buf.len().to_string();

@@ -64,7 +64,7 @@ where
 
     #[allow(clippy::result_large_err)]
     fn build_oneone(headers: BytesMut) -> Result<Self, HttpReadError<T>> {
-        let mut one = OneOne::new(headers)?;
+        let mut one = OneOne::try_from(headers)?;
         let next_state = match one.body_headers() {
             None => Self::End(one),
             Some(body_headers) => match body_headers.transfer_type {
@@ -212,36 +212,8 @@ where
             | matches!(self, State::ReadBodyChunkedExtraEnd(..))
     }
 
-    /* Description:
-     *      Method to convert State to OneOne<T>
-     *
-     * Steps:
-     *      1. if State is End
-     *      2. if body is present call convert_one_dot_one() to decompress
-     *         or dechunk oneone.
-     *      3. Change Connection keep-alive header to close
-     *      4. If has Proxy-Connection header, remove it
-     *      5. Remove ws extension header
-     *      Ok(OneOne<T>)
-     */
-
     fn into_frame(self) -> Result<OneOne<T>, DecompressError> {
         OneOne::<T>::try_from(self)
-        //if let Self::End(mut one) = self {
-        //    if one.body().is_some() {
-        //        one = convert_body(one, None)?;
-        //    }
-        //    if let Some(pos) = one.has_connection_keep_alive() {
-        //        one.header_map_as_mut()
-        //            .change_header_value_on_pos(pos, CLOSE);
-        //    }
-        //    if let Some(pos) = one.has_proxy_connection() {
-        //        one.header_map_as_mut().remove_header_on_pos(pos);
-        //    }
-        //    one.header_map_as_mut().remove_header_on_key(WS_EXT);
-        //    return Ok(one);
-        //}
-        //unreachable!();
     }
 }
 
@@ -260,7 +232,7 @@ where
                 }
                 one
             }
-            State::ReadBodyContentLengthExtraEnd(mut one, extra) => convert_body(one, Some(extra))?,
+            State::ReadBodyContentLengthExtraEnd(one, extra) => convert_body(one, Some(extra))?,
             State::ReadBodyChunkedExtraEnd(mut one, extra) => {
                 one = chunked_to_raw(one);
                 one = convert_body(one, Some(extra))?;

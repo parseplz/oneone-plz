@@ -25,7 +25,7 @@ pub fn decompress_body(
     encodings: &[ContentEncoding],
 ) -> Result<BytesMut, DecompressError> {
     let capacity = 2 * (main_body.len() + extra_body.as_ref().map(|b| b.len()).unwrap_or(0));
-    let mut buf = BytesMut::with_capacity(capacity);
+    let buf = BytesMut::with_capacity(capacity);
     let mut buf_writer = buf.writer();
 
     if let Some(extra) = extra_body {
@@ -36,8 +36,8 @@ pub fn decompress_body(
 
         match decompress(&main_body[..], &mut buf_writer, encodings) {
             Ok(out) => return Ok(out),
-            Err(e) => {
-                buf_writer.get_mut().try_reclaim(capacity);
+            Err(_e) => {
+                let _ = buf_writer.get_mut().try_reclaim(capacity);
                 buf_writer.get_mut().clear();
             }
         }
@@ -104,6 +104,7 @@ fn decompress_zstd(data: &[u8], writer: &mut Writer<BytesMut>) -> Result<u64, De
     copy(&mut reader, writer).map_err(DecompressError::Zstd)
 }
 
+#[cfg(test)]
 mod tests {
     use std::io::{Read, Write};
 
@@ -127,8 +128,8 @@ mod tests {
         let mut buf_writer = compressed.writer();
         // brotli
         let mut br = brotli::CompressorWriter::new(&mut buf_writer, 4096, 11, 22);
-        br.write_all(&data[..]);
-        br.flush();
+        let _ = br.write_all(&data[..]);
+        let _ = br.flush();
         drop(br);
         compressed = buf_writer.into_inner();
 
@@ -145,7 +146,7 @@ mod tests {
         // zstd
         let compressed = zstd::encode_all(&compressed[..], 1).unwrap();
 
-        let mut result = BytesMut::new();
+        let result = BytesMut::new();
         let mut writer = result.writer();
         let out = decompress(&compressed[..], &mut writer, &encodings).unwrap();
         assert_eq!(&out[..], &data[..]);

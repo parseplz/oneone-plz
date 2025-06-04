@@ -31,14 +31,12 @@ where
     T: InfoLine,
     MessageHead<T>: ParseBodyHeaders,
 {
-    pub fn new(buf: BytesMut) -> Result<Self, HeaderReadError> {
-        let message_head = MessageHead::<T>::new(buf)?;
-        let body_headers = message_head.parse_body_headers();
-        Ok(OneOne {
+    pub fn new(message_head: MessageHead<T>, body_headers: Option<BodyHeader>) -> Self {
+        OneOne {
             message_head,
             body_headers,
             body: None,
-        })
+        }
     }
 
     // Header Related methods
@@ -127,5 +125,19 @@ where
             header.unsplit(body);
         }
         header
+    }
+}
+
+impl<T> TryFrom<BytesMut> for OneOne<T>
+where
+    T: InfoLine,
+    MessageHead<T>: ParseBodyHeaders,
+{
+    type Error = HeaderReadError;
+
+    fn try_from(buf: BytesMut) -> Result<Self, Self::Error> {
+        let message_head = MessageHead::<T>::new(buf)?;
+        let body_headers = message_head.parse_body_headers();
+        Ok(OneOne::<T>::new(message_head, body_headers))
     }
 }
