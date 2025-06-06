@@ -116,7 +116,7 @@ where
     T: InfoLine,
 {
     fn into_bytes(self) -> BytesMut {
-        let mut header = self.message_head.into_data();
+        let mut header = self.message_head.into_bytes();
         if let Some(body) = self.body {
             let body = match body {
                 Body::Raw(body) => body,

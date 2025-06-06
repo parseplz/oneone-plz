@@ -45,7 +45,7 @@ where
     if let Some(Body::Chunked(_)) = one.body() {
         one = chunked_to_raw(one, buf);
     }
-    let mut body = one.get_body().into_data().unwrap();
+    let mut body = one.get_body().into_bytes().unwrap();
 
     // 2. Transfer Encoding
     if let Some(BodyHeader {
