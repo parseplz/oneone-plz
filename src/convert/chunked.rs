@@ -20,13 +20,14 @@ use header_plz::{
  *          b. add trailer to header_map.
  */
 
-pub fn chunked_to_raw<T>(mut one: OneOne<T>) -> OneOne<T>
+pub fn chunked_to_raw<T>(mut one: OneOne<T>, buf: &mut BytesMut) -> OneOne<T>
 where
     T: InfoLine,
     MessageHead<T>: ParseBodyHeaders,
 {
     let body = one.get_body().into_chunks();
-    let mut new_body = BytesMut::with_capacity(total_chunk_size(&body));
+    buf.reserve(total_chunk_size(&body));
+    let mut new_body = buf.split();
     body.into_iter().for_each(|chunk| match chunk {
         // 1. Combine ChunkType::Chunk into one body.
         ChunkType::Chunk(data) => new_body.extend_from_slice(&data[..data.len() - 2]),
@@ -93,10 +94,10 @@ mod test {
         let mut cbuf = Cursor::new(&mut buf);
         let mut state: State<Request> = State::new();
         let event = Event::Read(&mut cbuf);
-        state = state.next(event).unwrap();
+        state = state.try_next(event).unwrap();
         match state {
             State::End(_) => {
-                let data = state.into_frame().unwrap().into_data();
+                let data = state.try_into_frame().unwrap().into_bytes();
                 assert_eq!(data, verify);
             }
             _ => {
@@ -129,10 +130,10 @@ mod test {
         let mut cbuf = Cursor::new(&mut buf);
         let mut state: State<Request> = State::new();
         let event = Event::Read(&mut cbuf);
-        state = state.next(event).unwrap();
+        state = state.try_next(event).unwrap();
         match state {
             State::End(_) => {
-                let data = state.into_frame().unwrap().into_data();
+                let data = state.try_into_frame().unwrap().into_bytes();
                 assert_eq!(data, verify);
             }
             _ => {

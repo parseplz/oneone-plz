@@ -35,6 +35,7 @@ use crate::oneone::OneOne;
 pub fn convert_body<T>(
     mut one: OneOne<T>,
     mut extra_body: Option<BytesMut>,
+    buf: &mut BytesMut,
 ) -> Result<OneOne<T>, DecompressError>
 where
     T: InfoLine,
@@ -42,7 +43,7 @@ where
 {
     // 1. If chunked body convert chunked to CL
     if let Some(Body::Chunked(_)) = one.body() {
-        one = chunked_to_raw(one);
+        one = chunked_to_raw(one, buf);
     }
     let mut body = one.get_body().into_data().unwrap();
 
@@ -52,7 +53,7 @@ where
         ..
     }) = one.body_headers()
     {
-        body = decompress_body(body, extra_body.take(), encodings)?;
+        body = decompress_body(body, extra_body.take(), encodings, buf)?;
     }
     one.header_map_as_mut()
         .remove_header_on_key(TRANSFER_ENCODING);
@@ -63,7 +64,7 @@ where
         ..
     }) = one.body_headers()
     {
-        body = decompress_body(body, extra_body.take(), encodings)?;
+        body = decompress_body(body, extra_body.take(), encodings, buf)?;
         // 3. Remove Content-Encoding
         one.header_map_as_mut()
             .remove_header_on_key(CONTENT_ENCODING);
@@ -106,12 +107,12 @@ mod test {
         let mut cbuf = Cursor::new(&mut buf);
         let mut state: State<Response> = State::new();
         let event = Event::Read(&mut cbuf);
-        state = state.next(event).unwrap();
+        state = state.try_next(event).unwrap();
         let event = Event::End(&mut cbuf);
-        state = state.next(event).unwrap();
+        state = state.try_next(event).unwrap();
         match state {
             State::End(_) => {
-                let data = state.into_frame().unwrap().into_data();
+                let data = state.try_into_frame().unwrap().into_bytes();
                 assert_eq!(data, verify);
             }
             _ => {
@@ -132,11 +133,11 @@ mod test {
         let mut cbuf = Cursor::new(&mut buf);
         let mut state: State<Response> = State::new();
         let event = Event::Read(&mut cbuf);
-        state = state.next(event).unwrap();
+        state = state.try_next(event).unwrap();
         let event = Event::End(&mut cbuf);
-        let result = state.next(event);
+        let result = state.try_next(event);
         if let Err(HttpReadError::ContentLengthPartial(oneone, buf)) = result {
-            let data = oneone.into_data();
+            let data = oneone.into_bytes();
             assert_eq!(data, &res[..res.len() - 1]);
             assert_eq!(buf, "h");
         } else {

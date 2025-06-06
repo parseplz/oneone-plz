@@ -115,7 +115,7 @@ impl<T> Frame for OneOne<T>
 where
     T: InfoLine,
 {
-    fn into_data(self) -> BytesMut {
+    fn into_bytes(self) -> BytesMut {
         let mut header = self.message_head.into_data();
         if let Some(body) = self.body {
             let body = match body {

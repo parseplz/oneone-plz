@@ -15,7 +15,7 @@ fn test_response_message_head_single() {
 
     let response = parse_full_single::<Response>(input.as_bytes());
     assert_eq!(response.status_code(), "200");
-    let result = response.into_data();
+    let result = response.into_bytes();
     assert_eq!(result, input);
 }
 
@@ -26,26 +26,26 @@ fn test_response_message_head_multiple() {
     let mut cbuf = Cursor::new(&mut buf);
     let mut state: State<Response> = State::new();
     let event = Event::Read(&mut cbuf);
-    state = state.next(event).unwrap();
+    state = state.try_next(event).unwrap();
     assert!(matches!(state, State::ReadMessageHead));
     cbuf.as_mut().extend_from_slice(b"Server: Apache\r\n");
     let event = Event::Read(&mut cbuf);
-    state = state.next(event).unwrap();
+    state = state.try_next(event).unwrap();
     assert!(matches!(state, State::ReadMessageHead));
 
     cbuf.as_mut()
         .extend_from_slice(b"x-frame-options: DENY\r\n\r\n");
     let event = Event::Read(&mut cbuf);
-    state = state.next(event).unwrap();
+    state = state.try_next(event).unwrap();
     assert!(matches!(state, State::End(_)));
 
-    let response = state.into_frame().unwrap();
+    let response = state.try_into_frame().unwrap();
     assert_eq!(response.status_code(), "200");
     let verify = "HTTP/1.1 200 OK\r\n\
                   Date: Mon, 18 Jul 2016 16:06:00 GMT\r\n\
                   Server: Apache\r\n\
                   x-frame-options: DENY\r\n\r\n";
-    assert_eq!(response.into_data(), verify);
+    assert_eq!(response.into_bytes(), verify);
 }
 
 #[test]
@@ -62,7 +62,7 @@ fn test_response_message_head_multiple_2() {
         Date: Mon, 18 Jul 2016 16:06:00 GMT\r\n\
         Server: Apache\r\n\
         x-frame-options: DENY\r\n\r\n";
-    assert_eq!(response.into_data(), expected);
+    assert_eq!(response.into_bytes(), expected);
 }
 
 #[test]
@@ -95,7 +95,7 @@ fn test_response_message_head_parital() {
     let mut cbuf = Cursor::new(&mut buf);
     let event = Event::End(&mut cbuf);
     let mut state: State<Response> = State::new();
-    if let Err(HttpReadError::Unparsed(buf)) = state.next(event) {
+    if let Err(HttpReadError::Unparsed(buf)) = state.try_next(event) {
         assert_eq!(buf, input);
     } else {
         panic!()

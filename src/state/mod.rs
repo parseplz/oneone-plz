@@ -6,18 +6,14 @@ use buffer_plz::Event;
 use bytes::BytesMut;
 use header_plz::{
     body_headers::{parse::ParseBodyHeaders, transfer_types::TransferType},
-    const_headers::{CLOSE, WS_EXT},
     info_line::InfoLine,
     message_head::MessageHead,
     reader::find_message_head_end,
 };
 use protocol_traits_plz::Step;
+mod impl_try_from;
 
-use crate::{
-    convert::{chunked::chunked_to_raw, convert_body, decompress::DecompressError},
-    error::HttpReadError,
-    oneone::OneOne,
-};
+use crate::{convert::decompress::DecompressError, error::HttpReadError, oneone::OneOne};
 
 #[cfg_attr(test, derive(PartialEq, Eq))]
 #[derive(Debug)]
@@ -98,14 +94,14 @@ where
     type StateError = HttpReadError<T>;
     type FrameError = DecompressError;
 
-    fn next(mut self, event: Event) -> Result<Self, Self::StateError> {
+    fn try_next(mut self, event: Event) -> Result<Self, Self::StateError> {
         match (self, event) {
             (State::ReadMessageHead, Event::Read(buf)) => match find_message_head_end(buf) {
                 true => {
                     let raw_headers = buf.split_at_current_pos();
                     self = State::build_oneone(raw_headers)?;
                     if buf.len() > 0 {
-                        self = self.next(Event::Read(buf))?;
+                        self = self.try_next(Event::Read(buf))?;
                     }
                     Ok(self)
                 }
@@ -123,7 +119,7 @@ where
                                 let next_state = State::ReadBodyContentLengthExtra(oneone);
                                 match event {
                                     Event::Read(_) => Ok(next_state),
-                                    Event::End(_) => next_state.next(event),
+                                    Event::End(_) => next_state.try_next(event),
                                 }
                             } else {
                                 Ok(State::End(oneone))
@@ -175,9 +171,9 @@ where
                     }
                 }
             },
-            (State::ReadBodyChunked(oneone, _), Event::End(buf)) => Err(
-                HttpReadError::ChunkReaderNotEnoughData(oneone, buf.into_inner()),
-            ),
+            (State::ReadBodyChunked(oneone, _), Event::End(buf)) => {
+                Err(HttpReadError::ChunkReaderPartial(oneone, buf.into_inner()))
+            }
             (State::ReadBodyChunkedExtra(oneone), Event::Read(_)) => {
                 Ok(State::ReadBodyChunkedExtra(oneone))
             }
@@ -198,7 +194,7 @@ where
                 };
                 match event {
                     Event::Read(_) => Ok(self),
-                    Event::End(_) => self.next(event),
+                    Event::End(_) => self.try_next(event),
                 }
             }
             (State::ReadBodyContentLengthExtraEnd(..), _)
@@ -212,44 +208,9 @@ where
             | matches!(self, State::ReadBodyChunkedExtraEnd(..))
     }
 
-    fn into_frame(self) -> Result<OneOne<T>, DecompressError> {
-        OneOne::<T>::try_from(self)
-    }
-}
-
-impl<T> TryFrom<State<T>> for OneOne<T>
-where
-    T: InfoLine,
-    MessageHead<T>: ParseBodyHeaders,
-{
-    type Error = DecompressError;
-
-    fn try_from(value: State<T>) -> Result<Self, Self::Error> {
-        let mut one = match value {
-            State::End(mut one) => {
-                if one.body().is_some() {
-                    one = convert_body(one, None)?;
-                }
-                one
-            }
-            State::ReadBodyContentLengthExtraEnd(one, extra) => convert_body(one, Some(extra))?,
-            State::ReadBodyChunkedExtraEnd(mut one, extra) => {
-                one = chunked_to_raw(one);
-                one = convert_body(one, Some(extra))?;
-                one
-            }
-            _ => unreachable!(),
-        };
-
-        if let Some(pos) = one.has_connection_keep_alive() {
-            one.header_map_as_mut()
-                .change_header_value_on_pos(pos, CLOSE);
-        }
-        if let Some(pos) = one.has_proxy_connection() {
-            one.header_map_as_mut().remove_header_on_pos(pos);
-        }
-        one.header_map_as_mut().remove_header_on_key(WS_EXT);
-        Ok(one)
+    fn try_into_frame(self) -> Result<OneOne<T>, DecompressError> {
+        let mut buf = BytesMut::with_capacity(65535);
+        OneOne::<T>::try_from((self, &mut buf))
     }
 }
 
@@ -286,10 +247,10 @@ mod tests {
         let mut cbuf = Cursor::new(&mut buf);
         let mut state: State<Request> = State::new();
         let event = Event::Read(&mut cbuf);
-        state = state.next(event).unwrap();
+        state = state.try_next(event).unwrap();
         match state {
             State::End(_) => {
-                let data = state.into_frame().unwrap().into_data();
+                let data = state.try_into_frame().unwrap().into_bytes();
                 assert_eq!(data, verify);
             }
             _ => {
@@ -306,7 +267,7 @@ mod tests {
         let mut cbuf = Cursor::new(&mut buf);
         let mut state: State<Request> = State::new();
         let event = Event::Read(&mut cbuf);
-        state = state.next(event).unwrap();
+        state = state.try_next(event).unwrap();
         match state {
             State::End(one) => {
                 assert_eq!(one.message_head().infoline().method(), b"GET");
@@ -324,11 +285,11 @@ mod tests {
         let mut cbuf = Cursor::new(&mut buf);
         let mut state: State<Request> = State::new();
         let event = Event::Read(&mut cbuf);
-        state = state.next(event).unwrap();
+        state = state.try_next(event).unwrap();
         assert!(matches!(state, State::ReadMessageHead));
         assert_eq!(cbuf.position(), 17);
         let event = Event::End(&mut cbuf);
-        let result = state.next(event);
+        let result = state.try_next(event);
         assert!(matches!(result, Err(HttpReadError::Unparsed(_))));
     }
 
@@ -342,7 +303,7 @@ mod tests {
         let mut cbuf = Cursor::new(&mut buf);
         let mut state: State<Request> = State::new();
         let event = Event::Read(&mut cbuf);
-        state = state.next(event).unwrap();
+        state = state.try_next(event).unwrap();
         match state {
             State::End(one) => {
                 assert_eq!(one.method_as_string(), "POST");
@@ -365,11 +326,11 @@ mod tests {
         let mut cbuf = Cursor::new(&mut buf);
         let mut state: State<Response> = State::new();
         let event = Event::Read(&mut cbuf);
-        state = state.next(event).unwrap();
+        state = state.try_next(event).unwrap();
         match state {
             State::End(one) => {
                 assert_eq!(one.status_code(), "200");
-                let result = one.into_data();
+                let result = one.into_bytes();
                 assert_eq!(result.as_ptr_range(), org_range);
             }
             _ => {
@@ -386,7 +347,7 @@ mod tests {
         let mut cbuf = Cursor::new(&mut buf);
         let mut state: State<Request> = State::new();
         let event = Event::Read(&mut cbuf);
-        state = state.next(event).unwrap();
+        state = state.try_next(event).unwrap();
         assert!(matches!(state, State::ReadMessageHead));
         assert_eq!(cbuf.position(), 39);
     }
@@ -407,10 +368,10 @@ mod tests {
         let mut cbuf = Cursor::new(&mut buf);
         let mut state: State<Request> = State::new();
         let event = Event::Read(&mut cbuf);
-        state = state.next(event).unwrap();
+        state = state.try_next(event).unwrap();
         match state {
             State::End(_) => {
-                let data = state.into_frame().unwrap().into_data();
+                let data = state.try_into_frame().unwrap().into_bytes();
                 assert_eq!(data, verify);
             }
             _ => {
@@ -430,10 +391,10 @@ mod tests {
         let mut cbuf = Cursor::new(&mut buf);
         let mut state: State<Request> = State::new();
         let event = Event::Read(&mut cbuf);
-        state = state.next(event).unwrap();
+        state = state.try_next(event).unwrap();
         match state {
             State::End(_) => {
-                let result = state.into_frame().unwrap().into_data();
+                let result = state.try_into_frame().unwrap().into_bytes();
                 let result_range = result.as_ptr_range();
                 assert_eq!(org_range, result_range);
             }
@@ -454,7 +415,7 @@ mod tests {
         let mut cbuf = Cursor::new(&mut buf);
         let mut state: State<Request> = State::new();
         let event = Event::Read(&mut cbuf);
-        state = state.next(event).unwrap();
+        state = state.try_next(event).unwrap();
         // Incomplete data, expect ReadBodyChunked state with remaining data.
         assert!(matches!(state, State::ReadBodyChunked(_, _)));
     }
@@ -469,14 +430,14 @@ mod tests {
         let mut cbuf = Cursor::new(&mut buf);
         let mut state: State<Response> = State::new();
         let event = Event::Read(&mut cbuf);
-        state = state.next(event).unwrap();
+        state = state.try_next(event).unwrap();
         assert!(matches!(state, State::ReadBodyClose(_)));
         let event = Event::End(&mut cbuf);
-        state = state.next(event).unwrap();
+        state = state.try_next(event).unwrap();
         assert!(matches!(state, State::End(_)));
-        let one = state.into_frame().unwrap();
+        let one = state.try_into_frame().unwrap();
         assert_eq!(one.status_code(), "200");
-        let result = one.into_data();
+        let result = one.into_bytes();
         let verify = "HTTP/1.1 200 OK\r\n\
                       Host: reqbin.com\r\n\
                       Content-Type: text/plain\r\n\

@@ -19,5 +19,5 @@ fn test_response_te_gzip() {
     let expected = "HTTP/1.1 200 OK\r\n\
                     Content-Length: 15\r\n\r\n\
                     hello my friend";
-    assert_eq!(response.into_data(), expected);
+    assert_eq!(response.into_bytes(), expected);
 }

@@ -346,9 +346,9 @@ dependencies = [
 
 [[package]]
 name = "protocol-traits-plz"
-version = "0.0.3"
+version = "0.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "207b9c9f66558a8bb42ad7492bbfa940298f4b9f7d21b6f19546905f83fe1867"
+checksum = "9662df88cc5348cb41dde516c04ae0ed5c69a375a80ec26ad43fea3c6b10f562"
 dependencies = [
  "buffer-plz",
  "bytes",

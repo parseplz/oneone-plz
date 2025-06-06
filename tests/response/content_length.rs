@@ -16,7 +16,7 @@ fn test_response_content_length_basic() {
                  hello";
     let response = parse_full_single::<Response>(input.as_bytes());
     assert_eq!(response.status_code(), "200");
-    let result = response.into_data();
+    let result = response.into_bytes();
     assert_eq!(result, input);
 }
 
@@ -27,7 +27,7 @@ fn test_response_content_length_zero() {
                  Content-Length: 0\r\n\r\n";
     let response = parse_full_single::<Response>(input.as_bytes());
     assert_eq!(response.status_code(), "307");
-    let result = response.into_data();
+    let result = response.into_bytes();
     assert_eq!(result, input);
 }
 
@@ -42,7 +42,7 @@ fn test_response_content_length_brotli() {
     let verify = "HTTP/1.1 200 OK\r\n\
                   Content-Length: 11\r\n\r\n\
                   hello world";
-    assert_eq!(response.into_data(), verify);
+    assert_eq!(response.into_bytes(), verify);
 }
 
 #[test]
@@ -55,7 +55,7 @@ fn test_response_content_length_gzip() {
     let verify = "HTTP/1.1 200 OK\r\n\
                   Content-Length: 11\r\n\r\n\
                   hello world";
-    assert_eq!(response.into_data(), verify);
+    assert_eq!(response.into_bytes(), verify);
 }
 
 #[test]
@@ -68,7 +68,7 @@ fn test_response_content_length_zstd() {
     let verify = "HTTP/1.1 200 OK\r\n\
                   Content-Length: 11\r\n\r\n\
                   hello world";
-    assert_eq!(response.into_data(), verify);
+    assert_eq!(response.into_bytes(), verify);
 }
 
 #[test]
@@ -88,12 +88,12 @@ fn test_response_cl_extra_single() {
     let mut buf = BytesMut::from(input.as_bytes());
     let mut cbuf = Cursor::new(&mut buf);
     let mut state = poll_first::<Response>(&mut cbuf);
-    state = state.next(Event::End(&mut cbuf)).unwrap();
-    let response = state.into_frame().unwrap();
+    state = state.try_next(Event::End(&mut cbuf)).unwrap();
+    let response = state.try_into_frame().unwrap();
     let verify = "HTTP/1.1 200 OK\r\n\
                   Content-Length: 21\r\n\r\n\
                   hello world more data";
-    assert_eq!(response.into_data(), verify);
+    assert_eq!(response.into_bytes(), verify);
 }
 
 #[test]
@@ -106,7 +106,7 @@ fn test_response_cl_extra_multiple() {
     let verify = "HTTP/1.1 200 OK\r\n\
                   Content-Length: 21\r\n\r\n\
                   hello world more data";
-    assert_eq!(response.into_data(), verify);
+    assert_eq!(response.into_bytes(), verify);
 }
 
 #[test]
@@ -119,7 +119,7 @@ fn test_response_cl_extra_finished_end_single() {
     let verify = "HTTP/1.1 200 OK\r\n\
                   Content-Length: 27\r\n\r\n\
                   hello world more data added";
-    assert_eq!(response.into_data(), verify);
+    assert_eq!(response.into_bytes(), verify);
 }
 
 #[test]
@@ -133,7 +133,7 @@ fn test_response_cl_extra_finished_read_end_multiple() {
     let verify = "HTTP/1.1 200 OK\r\n\
                   Content-Length: 27\r\n\r\n\
                   hello world more data added";
-    assert_eq!(response.into_data(), verify);
+    assert_eq!(response.into_bytes(), verify);
 }
 
 #[test]
@@ -144,7 +144,7 @@ fn test_response_cl_partial_no_fix() {
     let mut buf = BytesMut::from(input.as_bytes());
     let mut cbuf = Cursor::new(&mut buf);
     let mut state = poll_first::<Response>(&mut cbuf);
-    let response = state.next(Event::End(&mut cbuf));
+    let response = state.try_next(Event::End(&mut cbuf));
     if let Err(e) = response {
         assert!(matches!(e, HttpReadError::ContentLengthPartial(_, _)));
         let verify = "HTTP/1.1 200 OK\r\n\
@@ -164,12 +164,15 @@ fn test_response_cl_partial_fix() {
     let mut buf = BytesMut::from(input.as_bytes());
     let mut cbuf = Cursor::new(&mut buf);
     let mut state = poll_first::<Response>(&mut cbuf);
-    if let Err(e) = state.next(Event::End(&mut cbuf)) {
+    if let Err(e) = state.try_next(Event::End(&mut cbuf)) {
         assert!(matches!(e, HttpReadError::ContentLengthPartial(_, _)));
         let verify = "HTTP/1.1 200 OK\r\n\
                       Content-Length: 1\r\n\r\n\
                       h";
-        assert_eq!(verify, OneOne::<Response>::try_from(e).unwrap().into_data());
+        assert_eq!(
+            verify,
+            OneOne::<Response>::try_from(e).unwrap().into_bytes()
+        );
     } else {
         panic!()
     }
@@ -182,7 +185,7 @@ fn test_response_cl_no_body_no_fix() {
     let mut buf = BytesMut::from(input.as_bytes());
     let mut cbuf = Cursor::new(&mut buf);
     let mut state = poll_first::<Response>(&mut cbuf);
-    if let Err(e) = state.next(Event::End(&mut cbuf)) {
+    if let Err(e) = state.try_next(Event::End(&mut cbuf)) {
         matches!(e, HttpReadError::ContentLengthPartial(_, _));
         let verify = "HTTP/1.1 200 OK\r\n\
                       Content-Length: 5\r\n\r\n";
@@ -199,11 +202,14 @@ fn test_response_cl_no_body_fix() {
     let mut buf = BytesMut::from(input.as_bytes());
     let mut cbuf = Cursor::new(&mut buf);
     let mut state = poll_first::<Response>(&mut cbuf);
-    if let Err(e) = state.next(Event::End(&mut cbuf)) {
+    if let Err(e) = state.try_next(Event::End(&mut cbuf)) {
         matches!(e, HttpReadError::ContentLengthPartial(_, _));
         let verify = "HTTP/1.1 200 OK\r\n\
                       Content-Length: 0\r\n\r\n";
-        assert_eq!(verify, OneOne::<Response>::try_from(e).unwrap().into_data());
+        assert_eq!(
+            verify,
+            OneOne::<Response>::try_from(e).unwrap().into_bytes()
+        );
     } else {
         panic!()
     }
@@ -217,13 +223,13 @@ fn test_response_missing_cl_with_body() {
     let mut buf = BytesMut::from(input);
     let mut cbuf = Cursor::new(&mut buf);
     let mut state = poll_first::<Response>(&mut cbuf);
-    state = state.next(Event::End(&mut cbuf)).unwrap();
-    let response = state.into_frame().unwrap();
+    state = state.try_next(Event::End(&mut cbuf)).unwrap();
+    let response = state.try_into_frame().unwrap();
     let verify = "HTTP/1.1 200 OK\r\n\
                   Content-Length: 11\r\n\r\n\
                   HELLO WORLD";
 
-    assert_eq!(response.into_data(), verify);
+    assert_eq!(response.into_bytes(), verify);
 }
 
 #[test]
@@ -235,10 +241,10 @@ fn test_response_missing_cl_with_extra_body() {
     let mut buf = BytesMut::from(input);
     let mut cbuf = Cursor::new(&mut buf);
     let mut state = poll_first::<Response>(&mut cbuf);
-    state = state.next(Event::End(&mut cbuf)).unwrap();
+    state = state.try_next(Event::End(&mut cbuf)).unwrap();
     assert!(matches!(state, State::End(_)));
     let verify = "HTTP/1.1 200 OK\r\n\
                   Content-Length: 21\r\n\r\n\
                   HELLO WORLD\nMORE DATA";
-    assert_eq!(state.into_frame().unwrap().into_data(), verify);
+    assert_eq!(state.try_into_frame().unwrap().into_bytes(), verify);
 }

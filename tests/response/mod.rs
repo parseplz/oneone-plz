@@ -31,5 +31,5 @@ fn test_response_content_length_deflate() {
     let verify = "HTTP/1.1 200 OK\r\n\
                   Content-Length: 11\r\n\r\n\
                   hello world";
-    assert_eq!(response.into_data(), verify);
+    assert_eq!(response.into_bytes(), verify);
 }

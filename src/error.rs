@@ -24,7 +24,7 @@ where
     #[error("partial| content length")]
     ContentLengthPartial(OneOne<T>, BytesMut),
     #[error("header not enough data")]
-    ChunkReaderNotEnoughData(OneOne<T>, BytesMut),
+    ChunkReaderPartial(OneOne<T>, BytesMut),
 }
 
 impl<T> From<HttpReadError<T>> for BytesMut
@@ -36,8 +36,8 @@ where
         match value {
             HttpReadError::Unparsed(buf) => buf,
             HttpReadError::ContentLengthPartial(oneone, buf)
-            | HttpReadError::ChunkReaderNotEnoughData(oneone, buf) => {
-                let mut data = oneone.into_data();
+            | HttpReadError::ChunkReaderPartial(oneone, buf) => {
+                let mut data = oneone.into_bytes();
                 data.unsplit(buf);
                 data
             }

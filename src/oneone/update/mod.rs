@@ -71,7 +71,7 @@ mod test {
         let buf = BytesMut::from("POST / HTTP/1.1\r\nContent-Length: 10\r\n\r\na");
         let req = OneOne::<Request>::update(buf).unwrap();
         let verify = BytesMut::from("POST / HTTP/1.1\r\nContent-Length: 1\r\n\r\na");
-        assert_eq!(req.into_data(), verify);
+        assert_eq!(req.into_bytes(), verify);
     }
 
     #[test]
@@ -79,7 +79,7 @@ mod test {
         let buf = BytesMut::from("POST / HTTP/1.1\r\nContent-Length: 0\r\n\r\nHello");
         let req = OneOne::<Request>::update(buf).unwrap();
         let verify = BytesMut::from("POST / HTTP/1.1\r\nContent-Length: 5\r\n\r\nHello");
-        assert_eq!(req.into_data(), verify);
+        assert_eq!(req.into_bytes(), verify);
     }
 
     #[test]
@@ -87,6 +87,6 @@ mod test {
         let buf = BytesMut::from("POST / HTTP/1.1\r\n\r\nHello");
         let req = OneOne::<Request>::update(buf).unwrap();
         let verify = BytesMut::from("POST / HTTP/1.1\r\nContent-Length: 5\r\n\r\nHello");
-        assert_eq!(req.into_data(), verify);
+        assert_eq!(req.into_bytes(), verify);
     }
 }

@@ -17,7 +17,7 @@ where
     let mut cbuf = Cursor::new(&mut buf);
     let state = poll_first(&mut cbuf);
     assert!(matches!(state, State::End(_)));
-    state.into_frame().unwrap()
+    state.try_into_frame().unwrap()
 }
 
 pub fn poll_first<T>(buf: &mut Cursor<'_>) -> State<T>
@@ -26,7 +26,7 @@ where
     MessageHead<T>: ParseBodyHeaders,
 {
     let state: State<T> = State::new();
-    state.next(Event::Read(buf)).unwrap()
+    state.try_next(Event::Read(buf)).unwrap()
 }
 
 pub fn parse_full_multiple<T>(input: &[&[u8]]) -> OneOne<T>
@@ -40,9 +40,9 @@ where
 
     for &chunk in &input[1..] {
         cbuf.as_mut().extend_from_slice(chunk);
-        state = state.next(Event::Read(&mut cbuf)).unwrap();
+        state = state.try_next(Event::Read(&mut cbuf)).unwrap();
     }
-    state = state.next(Event::End(&mut cbuf)).unwrap();
+    state = state.try_next(Event::End(&mut cbuf)).unwrap();
     assert!(state.is_ended());
-    state.into_frame().unwrap()
+    state.try_into_frame().unwrap()
 }
