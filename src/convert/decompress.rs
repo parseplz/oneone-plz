@@ -68,13 +68,16 @@ pub fn decompress(
     let mut input: &[u8] = compressed;
     let mut output = writer.get_mut().split();
 
-    for &enc in encodings.iter().rev() {
+    for enc in encodings.iter().rev() {
         match enc {
             ContentEncoding::Brotli => decompress_brotli(input, writer),
             ContentEncoding::Gzip => decompress_gzip(input, writer),
             ContentEncoding::Deflate => decompress_deflate(input, writer),
             ContentEncoding::Identity | ContentEncoding::Chunked => continue,
             ContentEncoding::Zstd | ContentEncoding::Compress => decompress_zstd(input, writer),
+            ContentEncoding::Unknown(s) => {
+                todo!()
+            }
         }?;
         output = writer.get_mut().split();
         input = &output[..];
