@@ -75,7 +75,14 @@ pub fn decompress_body(
         // 2. split extra from original
         let extra = main_body.split_off(main_org_len);
         // 3. Try main
-        let mut main_decompressed = decompress(&main_body[..], &mut buf_writer, encodings)?;
+        let mut main_decompressed: BytesMut =
+            match decompress(&main_body[..], &mut buf_writer, encodings) {
+                Ok(buf) => buf,
+                Err(mut e) => {
+                    e.body.unsplit(extra);
+                    return Err(e);
+                }
+            };
 
         let extra_decompressed = match decompress(&extra[..], &mut buf_writer, encodings) {
             Ok(out) => out,  // compressed separately
