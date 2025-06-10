@@ -20,7 +20,7 @@ use header_plz::{
  *          b. add trailer to header_map.
  */
 
-pub fn chunked_to_raw<T>(mut one: OneOne<T>, buf: &mut BytesMut) -> OneOne<T>
+pub fn chunked_to_raw<T>(mut one: &mut OneOne<T>, buf: &mut BytesMut)
 where
     T: InfoLine,
     MessageHead<T>: ParseBodyHeaders,
@@ -45,7 +45,6 @@ where
         _ => {}
     });
     one.set_body(Body::Raw(new_body));
-    one
 }
 
 // Partial chunked body

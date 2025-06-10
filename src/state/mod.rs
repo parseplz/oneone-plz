@@ -13,7 +13,7 @@ use header_plz::{
 use protocol_traits_plz::Step;
 mod impl_try_from;
 
-use crate::{convert::decompress::DecompressError, error::HttpReadError, oneone::OneOne};
+use crate::{convert::decompress::error::DecompressError, error::HttpReadError, oneone::OneOne};
 
 #[cfg_attr(test, derive(PartialEq, Eq))]
 #[derive(Debug)]
@@ -209,8 +209,11 @@ where
     }
 
     fn try_into_frame(self) -> Result<OneOne<T>, DecompressError> {
+        /*
         let mut buf = BytesMut::with_capacity(65535);
         OneOne::<T>::try_from((self, &mut buf))
+        */
+        todo!()
     }
 }
 

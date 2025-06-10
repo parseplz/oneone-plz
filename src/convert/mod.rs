@@ -6,10 +6,11 @@ pub mod chunked;
 pub mod decompress;
 use chunked::chunked_to_raw;
 use content_length::update_content_length;
+use decompress::error::DecompressError;
 use decompress::*;
 use header_plz::{
-    body_headers::{BodyHeader, parse::ParseBodyHeaders},
-    const_headers::{CONTENT_ENCODING, TRANSFER_ENCODING},
+    body_headers::{BodyHeader, content_encoding::ContentEncoding, parse::ParseBodyHeaders},
+    const_headers::{CE, CONTENT_ENCODING, TE, TRANSFER_ENCODING},
     info_line::InfoLine,
     message_head::MessageHead,
 };
@@ -36,38 +37,69 @@ pub fn convert_body<T>(
     mut one: OneOne<T>,
     mut extra_body: Option<BytesMut>,
     buf: &mut BytesMut,
-) -> Result<OneOne<T>, DecompressError>
+) -> Result<OneOne<T>, (OneOne<T>, DecompressError)>
 where
     T: InfoLine,
     MessageHead<T>: ParseBodyHeaders,
 {
     // 1. If chunked body convert chunked to CL
     if let Some(Body::Chunked(_)) = one.body() {
-        one = chunked_to_raw(one, buf);
+        chunked_to_raw(&mut one, buf);
     }
     let mut body = one.get_body().into_bytes().unwrap();
+    let mut body_headers = one.body_headers_as_mut().take();
 
     // 2. Transfer Encoding
     if let Some(BodyHeader {
         transfer_encoding: Some(encodings),
         ..
-    }) = one.body_headers()
+    }) = body_headers.as_ref()
     {
-        body = decompress_body(body, extra_body.take(), encodings, buf)?;
+        match apply_compression(
+            &mut one,
+            encodings,
+            body,
+            extra_body.take(),
+            buf,
+            TRANSFER_ENCODING,
+            TE,
+        ) {
+            Ok(dbody) => body = dbody,
+            Err(e) => {
+                add_body_and_update_cl(&mut one, e.body, body_headers);
+                return Err((one, e.error));
+            }
+        }
+    } else {
+        if !one
+            .header_map_as_mut()
+            .remove_header_on_key(TRANSFER_ENCODING)
+        {
+            one.header_map_as_mut().remove_header_on_key(TE);
+        }
     }
-    one.header_map_as_mut()
-        .remove_header_on_key(TRANSFER_ENCODING);
 
-    // 2. Content Encoding
+    // 3. Content Encoding
     if let Some(BodyHeader {
         content_encoding: Some(encodings),
         ..
-    }) = one.body_headers()
+    }) = body_headers.as_ref()
     {
-        body = decompress_body(body, extra_body.take(), encodings, buf)?;
-        // 3. Remove Content-Encoding
-        one.header_map_as_mut()
-            .remove_header_on_key(CONTENT_ENCODING);
+        match apply_compression(
+            &mut one,
+            encodings,
+            body,
+            extra_body.take(),
+            buf,
+            CONTENT_ENCODING,
+            CE,
+        ) {
+            Ok(dbody) => body = dbody,
+            Err(e) => {
+                add_body_and_update_cl(&mut one, e.body, body_headers);
+                return Err((one, e.error));
+            }
+        }
     }
 
     if let Some(extra) = extra_body {
@@ -75,12 +107,26 @@ where
     }
 
     // 4. Update Content-Length
+    add_body_and_update_cl(&mut one, body, body_headers);
+    Ok(one)
+}
+
+pub fn add_body_and_update_cl<T>(
+    one: &mut OneOne<T>,
+    body: BytesMut,
+    body_headers: Option<BodyHeader>,
+) where
+    T: InfoLine,
+    MessageHead<T>: ParseBodyHeaders,
+{
     if !body.is_empty() {
-        update_content_length(&mut one, body.len());
+        update_content_length(one, body.len());
     }
 
+    if let Some(bh) = body_headers {
+        one.body_headers_as_mut().replace(bh);
+    }
     one.set_body(Body::Raw(body));
-    Ok(one)
 }
 
 #[cfg(test)]
