@@ -6,9 +6,7 @@ use buffer_plz::Event;
 use bytes::BytesMut;
 use header_plz::{
     body_headers::{parse::ParseBodyHeaders, transfer_types::TransferType},
-    info_line::InfoLine,
-    message_head::MessageHead,
-    reader::find_message_head_end,
+    message_head::{MessageHead, info_line::InfoLine},
 };
 use protocol_traits_plz::Step;
 mod impl_try_from;
@@ -77,7 +75,6 @@ where
                         Self::ReadBodyChunked(one, ChunkReaderState::ReadSize)
                     }
                     TransferType::Close => Self::ReadBodyClose(one),
-                    TransferType::Unknown => Self::End(one),
                 },
                 None => Self::End(one),
             },
@@ -96,7 +93,7 @@ where
 
     fn try_next(mut self, event: Event) -> Result<Self, Self::StateError> {
         match (self, event) {
-            (State::ReadMessageHead, Event::Read(buf)) => match find_message_head_end(buf) {
+            (State::ReadMessageHead, Event::Read(buf)) => match MessageHead::is_complete(buf) {
                 true => {
                     let raw_headers = buf.split_at_current_pos();
                     self = State::build_oneone(raw_headers)?;
@@ -221,7 +218,7 @@ where
 mod tests {
     use buffer_plz::Cursor;
     use bytes::BytesMut;
-    use header_plz::info_line::{request::Request, response::Response};
+    use header_plz::{Request, Response};
     use protocol_traits_plz::Frame;
 
     use super::*;

@@ -1,7 +1,7 @@
 use crate::{parse_full_single, poll_first};
 use buffer_plz::{Cursor, Event};
 use bytes::BytesMut;
-use header_plz::info_line::{request::Request, response::Response};
+use header_plz::Response;
 use oneone_plz::error::HttpReadError;
 use oneone_plz::{oneone::OneOne, state::State};
 use protocol_traits_plz::Frame;

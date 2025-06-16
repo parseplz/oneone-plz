@@ -1,4 +1,4 @@
-use header_plz::{info_line::request::Request, methods::METHODS_WITH_BODY};
+use header_plz::{Request, methods::METHODS_WITH_BODY};
 
 use super::*;
 

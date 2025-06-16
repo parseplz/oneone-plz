@@ -6,8 +6,9 @@ use body_plz::variants::{
 use bytes::BytesMut;
 
 use header_plz::{
-    body_headers::parse::ParseBodyHeaders, const_headers::TRAILER, info_line::InfoLine,
-    message_head::MessageHead,
+    body_headers::parse::ParseBodyHeaders,
+    const_headers::TRAILER,
+    message_head::{MessageHead, info_line::InfoLine},
 };
 
 /* Description:
@@ -62,7 +63,7 @@ pub fn partial_chunked_to_raw(vec_body: Vec<ChunkType>) -> Option<BytesMut> {
 #[cfg(test)]
 mod test {
     use buffer_plz::{Cursor, Event};
-    use header_plz::info_line::request::Request;
+    use header_plz::Request;
     use protocol_traits_plz::{Frame, Step};
 
     use crate::state::State;

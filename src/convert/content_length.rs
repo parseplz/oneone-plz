@@ -1,6 +1,7 @@
 use header_plz::{
-    body_headers::parse::ParseBodyHeaders, const_headers::CONTENT_LENGTH, info_line::InfoLine,
-    message_head::MessageHead,
+    body_headers::parse::ParseBodyHeaders,
+    const_headers::CONTENT_LENGTH,
+    message_head::{MessageHead, info_line::InfoLine},
 };
 
 use crate::oneone::OneOne;
@@ -15,7 +16,7 @@ where
     match one.has_header_key(CONTENT_LENGTH) {
         Some(pos) => {
             one.header_map_as_mut()
-                .change_header_value_on_pos(pos, &len_string);
+                .update_header_value_on_position(pos, &len_string);
         }
         None => {
             // 2. else add new cl

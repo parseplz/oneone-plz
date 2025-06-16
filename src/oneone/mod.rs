@@ -1,11 +1,10 @@
 use body_plz::variants::Body;
 use bytes::BytesMut;
 use header_plz::{
+    Header, HeaderMap, InfoLine,
     body_headers::{BodyHeader, parse::ParseBodyHeaders},
     const_headers::{CONNECTION, KEEP_ALIVE, PROXY_CONNECTION, TRAILER},
     error::HeaderReadError,
-    header_map::{HeaderMap, header::Header},
-    info_line::InfoLine,
     message_head::MessageHead,
 };
 use protocol_traits_plz::Frame;
@@ -53,7 +52,7 @@ where
     }
 
     pub fn has_header_key(&self, key: &str) -> Option<usize> {
-        self.message_head.header_map().has_header_key(key)
+        self.message_head.header_map().header_key_position(key)
     }
 
     pub fn add_header(&mut self, key: &str, value: &str) {
@@ -64,12 +63,12 @@ where
     pub fn has_trailers(&self) -> bool {
         self.message_head
             .header_map()
-            .has_header_key(TRAILER)
+            .header_key_position(TRAILER)
             .is_some()
     }
 
     pub fn value_for_key(&self, key: &str) -> Option<&str> {
-        self.message_head.header_map().value_for_key(key)
+        self.message_head.header_map().value_of_key(key)
     }
 
     // Body Headers Related
@@ -107,7 +106,7 @@ where
     pub fn has_proxy_connection(&self) -> Option<usize> {
         self.message_head
             .header_map()
-            .has_header_key(PROXY_CONNECTION)
+            .header_key_position(PROXY_CONNECTION)
     }
 }
 

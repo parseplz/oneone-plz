@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 
 use header_plz::{
-    info_line::request::Request,
+    Request,
     methods::{CONNECT, Method},
 };
 

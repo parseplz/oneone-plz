@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 
 use body_plz::variants::Body;
-use header_plz::info_line::response::Response;
+use header_plz::Response;
 
 use super::OneOne;
 

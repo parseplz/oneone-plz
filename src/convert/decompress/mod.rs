@@ -2,10 +2,11 @@ use std::io::copy;
 
 use bytes::{BufMut, BytesMut, buf::Writer};
 use header_plz::{
-    body_headers::{content_encoding::ContentEncoding, parse::ParseBodyHeaders},
+    body_headers::{
+        content_encoding::ContentEncoding, encoding_info::EncodingInfo, parse::ParseBodyHeaders,
+    },
     const_headers::TRANSFER_ENCODING,
-    info_line::InfoLine,
-    message_head::MessageHead,
+    message_head::{MessageHead, info_line::InfoLine},
 };
 pub mod error;
 use crate::{convert::decompress::error::DEStruct, oneone::OneOne};
@@ -15,7 +16,7 @@ use thiserror::Error;
 
 pub fn apply_compression<T>(
     one: &mut OneOne<T>,
-    encodings: &[ContentEncoding],
+    encodings: &[EncodingInfo],
     mut body: BytesMut,
     mut extra_body: Option<BytesMut>,
     buf: &mut BytesMut,
@@ -38,8 +39,8 @@ where
             let ce = ContentEncoding::from(&e);
             let pos = encodings.iter().position(|e| *e == ce).unwrap();
             let to_remove = &encodings[..pos];
-            one.header_map_as_mut()
-                .remove_applied_compression(ct_header, to_remove);
+            //one.header_map_as_mut()
+            //    .remove_applied_compression(ct_header, to_remove);
             Err(e)
         }
     }

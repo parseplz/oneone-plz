@@ -1,6 +1,6 @@
 use buffer_plz::{Cursor, Event};
 use bytes::BytesMut;
-use header_plz::info_line::{request::Request, response::Response};
+use header_plz::Response;
 use oneone_plz::{error::HttpReadError, oneone::OneOne, state::State};
 use protocol_traits_plz::Frame;
 use protocol_traits_plz::Step;

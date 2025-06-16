@@ -1,4 +1,4 @@
-use header_plz::info_line::response::Response;
+use header_plz::Response;
 
 use super::*;
 

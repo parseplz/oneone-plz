@@ -1,7 +1,7 @@
 use body_plz::{reader::chunked_reader::ChunkReaderError, variants::Body};
 use bytes::BytesMut;
 use header_plz::{
-    body_headers::parse::ParseBodyHeaders, error::HeaderReadError, info_line::InfoLine,
+    InfoLine, body_headers::parse::ParseBodyHeaders, error::HeaderReadError,
     message_head::MessageHead,
 };
 use protocol_traits_plz::Frame;

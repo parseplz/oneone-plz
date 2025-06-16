@@ -52,7 +52,7 @@ where
         one.set_body(Body::Raw(buf));
         if !one
             .header_map_as_mut()
-            .change_header_value_on_key(CONTENT_LENGTH, len.as_str())
+            .update_header_value_on_key(CONTENT_LENGTH, len.as_str())
         {
             one.add_header(CONTENT_LENGTH, &len);
         }
@@ -62,7 +62,8 @@ where
 
 #[cfg(test)]
 mod test {
-    use header_plz::info_line::request::Request;
+
+    use header_plz::Request;
 
     use super::*;
 
