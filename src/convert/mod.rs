@@ -10,7 +10,10 @@ use decompress::error::DecompressError;
 use decompress::*;
 use header_plz::{
     InfoLine,
-    body_headers::{BodyHeader, content_encoding::ContentEncoding, parse::ParseBodyHeaders},
+    body_headers::{
+        BodyHeader, content_encoding::ContentEncoding, encoding_info::EncodingInfo,
+        parse::ParseBodyHeaders,
+    },
     const_headers::{CONTENT_ENCODING, TRANSFER_ENCODING},
     message_head::MessageHead,
 };

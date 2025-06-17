@@ -27,6 +27,8 @@ impl DecompressError {
 #[derive(Debug)]
 pub struct DEStruct {
     pub body: BytesMut,
+    pub encoding_index: usize,
+    pub extra_body: Option<BytesMut>,
     pub error: DecompressError,
 }
 
@@ -34,22 +36,38 @@ impl DEStruct {
     pub fn is_unknown_encoding(&self) -> bool {
         matches!(self.error, DecompressError::Unknown(_))
     }
-}
 
-impl From<(BytesMut, DecompressError)> for DEStruct {
-    fn from((body, error): (BytesMut, DecompressError)) -> Self {
-        DEStruct { body, error }
-    }
-}
-
-impl From<&DEStruct> for ContentEncoding {
-    fn from(value: &DEStruct) -> Self {
-        match &value.error {
-            DecompressError::Brotli(_) => ContentEncoding::Brotli,
-            DecompressError::Deflate(_) => ContentEncoding::Deflate,
-            DecompressError::Gzip(_) => ContentEncoding::Gzip,
-            DecompressError::Zstd(_) => ContentEncoding::Zstd,
-            DecompressError::Unknown(e) => ContentEncoding::Unknown(e.to_string()),
+    pub fn new(
+        encoding_index: usize,
+        body: BytesMut,
+        extra_body: Option<BytesMut>,
+        error: DecompressError,
+    ) -> Self {
+        DEStruct {
+            encoding_index,
+            body,
+            extra_body,
+            error,
         }
     }
 }
+
+/*
+impl From<(usize, BytesMut, Option<BytesMut>, DecompressError)> for DEStruct {
+    fn from(
+        (encoding_index, body, extra_body, error): (
+            usize,
+            BytesMut,
+            Option<BytesMut>,
+            DecompressError,
+        ),
+    ) -> Self {
+        DEStruct {
+            encoding_index,
+            body,
+            extra_body,
+            error,
+        }
+    }
+}
+*/
