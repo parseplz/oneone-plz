@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use body_plz::{
     reader::{chunked_reader::ChunkReaderState, content_length_reader::read_content_length},
     variants::Body,
@@ -9,9 +11,11 @@ use header_plz::{
     message_head::{MessageHead, info_line::InfoLine},
 };
 use protocol_traits_plz::Step;
-mod impl_try_from;
 
-use crate::{convert::decompress::error::DecompressError, error::HttpReadError, oneone::OneOne};
+use crate::{
+    error::HttpReadError,
+    oneone::{OneOne, impl_try_from::FrameError},
+};
 
 #[cfg_attr(test, derive(PartialEq, Eq))]
 #[derive(Debug)]
@@ -89,7 +93,7 @@ where
     MessageHead<T>: ParseBodyHeaders,
 {
     type StateError = HttpReadError<T>;
-    type FrameError = DecompressError;
+    type FrameError = FrameError;
 
     fn try_next(mut self, event: Event) -> Result<Self, Self::StateError> {
         match (self, event) {
@@ -205,12 +209,30 @@ where
             | matches!(self, State::ReadBodyChunkedExtraEnd(..))
     }
 
-    fn try_into_frame(self) -> Result<OneOne<T>, DecompressError> {
-        /*
+    fn try_into_frame(self) -> Result<OneOne<T>, FrameError> {
         let mut buf = BytesMut::with_capacity(65535);
         OneOne::<T>::try_from((self, &mut buf))
-        */
-        todo!()
+    }
+}
+
+impl<T> Display for State<T>
+where
+    T: InfoLine,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            State::ReadMessageHead => write!(f, "ReadMessageHead"),
+            State::ReadBodyContentLength(_, _) => write!(f, "ReadBodyContentLength"),
+            State::ReadBodyContentLengthExtra(_) => write!(f, "ReadBodyContentLengthExtra"),
+            State::ReadBodyChunked(_, _) => write!(f, "ReadBodyChunked"),
+            State::ReadBodyChunkedExtra(_) => write!(f, "ReadBodyChunkedExtra"),
+            State::ReadBodyClose(_) => write!(f, "ReadBodyClose"),
+            State::End(_) => write!(f, "End"),
+            State::ReadBodyContentLengthExtraEnd(_, _) => {
+                write!(f, "ReadBodyContentLengthExtraEnd")
+            }
+            State::ReadBodyChunkedExtraEnd(_, _) => write!(f, "ReadBodyChunkedExtraEnd"),
+        }
     }
 }
 
@@ -248,14 +270,11 @@ mod tests {
         let mut state: State<Request> = State::new();
         let event = Event::Read(&mut cbuf);
         state = state.try_next(event).unwrap();
-        match state {
-            State::End(_) => {
-                let data = state.try_into_frame().unwrap().into_bytes();
-                assert_eq!(data, verify);
-            }
-            _ => {
-                panic!()
-            }
+        if let State::End(_) = state {
+            let data = state.try_into_frame().unwrap().into_bytes();
+            assert_eq!(data, verify);
+        } else {
+            panic!()
         }
     }
 
@@ -268,13 +287,10 @@ mod tests {
         let mut state: State<Request> = State::new();
         let event = Event::Read(&mut cbuf);
         state = state.try_next(event).unwrap();
-        match state {
-            State::End(one) => {
-                assert_eq!(one.message_head().infoline().method(), b"GET");
-            }
-            _ => {
-                panic!()
-            }
+        if let State::End(one) = state {
+            assert_eq!(one.message_head().infoline().method(), b"GET");
+        } else {
+            panic!()
         }
     }
 
@@ -304,14 +320,11 @@ mod tests {
         let mut state: State<Request> = State::new();
         let event = Event::Read(&mut cbuf);
         state = state.try_next(event).unwrap();
-        match state {
-            State::End(one) => {
-                assert_eq!(one.method_as_string(), "POST");
-                assert_eq!(one.uri_as_string(), "/echo");
-            }
-            _ => {
-                panic!()
-            }
+        if let State::End(one) = state {
+            assert_eq!(one.method_as_string(), "POST");
+            assert_eq!(one.uri_as_string(), "/echo");
+        } else {
+            panic!()
         }
     }
 
@@ -327,15 +340,12 @@ mod tests {
         let mut state: State<Response> = State::new();
         let event = Event::Read(&mut cbuf);
         state = state.try_next(event).unwrap();
-        match state {
-            State::End(one) => {
-                assert_eq!(one.status_code(), "200");
-                let result = one.into_bytes();
-                assert_eq!(result.as_ptr_range(), org_range);
-            }
-            _ => {
-                panic!()
-            }
+        if let State::End(one) = state {
+            assert_eq!(one.status_code(), "200");
+            let result = one.into_bytes();
+            assert_eq!(result.as_ptr_range(), org_range);
+        } else {
+            panic!()
         }
     }
 
@@ -369,14 +379,11 @@ mod tests {
         let mut state: State<Request> = State::new();
         let event = Event::Read(&mut cbuf);
         state = state.try_next(event).unwrap();
-        match state {
-            State::End(_) => {
-                let data = state.try_into_frame().unwrap().into_bytes();
-                assert_eq!(data, verify);
-            }
-            _ => {
-                panic!("Expected State::End, found {:?}", state);
-            }
+        if let State::End(_) = state {
+            let data = state.try_into_frame().unwrap().into_bytes();
+            assert_eq!(data, verify);
+        } else {
+            panic!("Expected State::End, found {:?}", state);
         }
     }
 
@@ -392,15 +399,12 @@ mod tests {
         let mut state: State<Request> = State::new();
         let event = Event::Read(&mut cbuf);
         state = state.try_next(event).unwrap();
-        match state {
-            State::End(_) => {
-                let result = state.try_into_frame().unwrap().into_bytes();
-                let result_range = result.as_ptr_range();
-                assert_eq!(org_range, result_range);
-            }
-            _ => {
-                panic!("Expected State::End, found {:?}", state);
-            }
+        if let State::End(_) = state {
+            let result = state.try_into_frame().unwrap().into_bytes();
+            let result_range = result.as_ptr_range();
+            assert_eq!(org_range, result_range);
+        } else {
+            panic!("Expected State::End, found {:?}", state);
         }
     }
 

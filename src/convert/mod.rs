@@ -14,7 +14,6 @@ use header_plz::{
         BodyHeader, content_encoding::ContentEncoding, encoding_info::EncodingInfo,
         parse::ParseBodyHeaders,
     },
-    const_headers::{CONTENT_ENCODING, TRANSFER_ENCODING},
     message_head::MessageHead,
 };
 
@@ -37,71 +36,66 @@ use crate::oneone::OneOne;
  */
 
 pub fn convert_body<T>(
-    mut one: OneOne<T>,
+    one: &mut OneOne<T>,
     mut extra_body: Option<BytesMut>,
     buf: &mut BytesMut,
-) -> Result<OneOne<T>, (OneOne<T>, DecompressError)>
+) -> Result<(), DecompressError>
 where
     T: InfoLine,
     MessageHead<T>: ParseBodyHeaders,
 {
     // 1. If chunked body convert chunked to CL
     if let Some(Body::Chunked(_)) = one.body() {
-        chunked_to_raw(&mut one, buf);
+        chunked_to_raw(one, buf);
     }
     let mut body = one.get_body().into_bytes().unwrap();
-    let mut body_headers = one.body_headers_as_mut().take();
+    let body_headers = one.body_headers_as_mut().take();
 
-    /*
     // 2. Transfer Encoding
     if let Some(BodyHeader {
         transfer_encoding: Some(einfo_list),
         ..
     }) = body_headers.as_ref()
     {
-        match apply_compression(
-            &mut one,
-            encodings,
-            body,
-            extra_body.take(),
-            buf,
-            TRANSFER_ENCODING,
-            TRANSFER_ENCODING,
-        ) {
-            Ok(dbody) => body = dbody,
-            Err(e) => {
-                add_body_and_update_cl(&mut one, e.body, body_headers);
-                return Err((one, e.error));
+        // if only chunked present do nothing
+        if let Some(index) = is_only_te_chunked(einfo_list) {
+            one.header_map_as_mut().remove_header_on_position(index);
+        } else {
+            match decompress_body(one, body, extra_body.take(), einfo_list, buf) {
+                Ok((result_body, result_extra_body)) => {
+                    body = result_body;
+                    extra_body = result_extra_body;
+                }
+                Err(e) => {
+                    let (body, e) = e.into_body_and_error();
+                    add_body_and_update_cl(one, body, body_headers);
+                    // TODO: remove chunked TE
+                    //if let Some((header_index, value_index)) =
+                    //    body_headers.as_ref().chunked_te_position()
+                    //{
+                    //    todo!()
+                    //}
+                    return Err(e);
+                }
             }
-        }
-    } else {
-        if !one
-            .header_map_as_mut()
-            .remove_header_on_key(TRANSFER_ENCODING)
-        {
-            one.header_map_as_mut().remove_header_on_key(TE);
         }
     }
 
     // 3. Content Encoding
     if let Some(BodyHeader {
-        content_encoding: Some(encodings),
+        content_encoding: Some(einfo_list),
         ..
     }) = body_headers.as_ref()
     {
-        match apply_compression(
-            &mut one,
-            encodings,
-            body,
-            extra_body.take(),
-            buf,
-            CONTENT_ENCODING,
-            CE,
-        ) {
-            Ok(dbody) => body = dbody,
+        match decompress_body(one, body, extra_body.take(), einfo_list, buf) {
+            Ok((result_body, result_extra_body)) => {
+                body = result_body;
+                extra_body = result_extra_body;
+            }
             Err(e) => {
-                add_body_and_update_cl(&mut one, e.body, body_headers);
-                return Err((one, e.error));
+                let (body, e) = e.into_body_and_error();
+                add_body_and_update_cl(one, body, body_headers);
+                return Err(e);
             }
         }
     }
@@ -110,10 +104,9 @@ where
         body.unsplit(extra);
     }
 
-    */
     // 4. Update Content-Length
-    add_body_and_update_cl(&mut one, body, body_headers);
-    Ok(one)
+    add_body_and_update_cl(one, body, body_headers);
+    Ok(())
 }
 
 pub fn add_body_and_update_cl<T>(
@@ -132,6 +125,17 @@ pub fn add_body_and_update_cl<T>(
         one.body_headers_as_mut().replace(bh);
     }
     one.set_body(Body::Raw(body));
+}
+
+pub fn is_only_te_chunked(einfo_list: &[EncodingInfo]) -> Option<usize> {
+    if einfo_list.len() == 1
+        && einfo_list[0].encodings().len() == 1
+        && einfo_list[0].encodings()[0] == ContentEncoding::Chunked
+    {
+        Some(einfo_list[0].header_index)
+    } else {
+        None
+    }
 }
 
 #[cfg(test)]

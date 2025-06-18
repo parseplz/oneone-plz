@@ -61,9 +61,9 @@ checksum = "5c8214115b7bf84099f1309324e63141d4c5d7cc26862f97a0a857dbefe165bd"
 
 [[package]]
 name = "body-plz"
-version = "0.0.20"
+version = "0.0.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0805773fb44abdf2e8b1db104e09690273974c1e88d959651c78f4cb7d6c4440"
+checksum = "eba04e0a5c03abde6ea5454ba1f77ab41d5c9127dc55d7adc3b34db205ce8405"
 dependencies = [
  "buffer-plz",
  "bytes",
@@ -170,9 +170,9 @@ checksum = "07e28edb80900c19c28f1072f2e8aeca7fa06b23cd4169cefe1af5aa3260783f"
 
 [[package]]
 name = "header-plz"
-version = "0.0.16"
+version = "0.0.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "329e0285bdb50478013a5fb35d8cd6057f966257abed0927b623d1a23c54f2a3"
+checksum = "b109edbbeba5eba5757fdb6df03562dbba7df7bfad2bbedcb8b0dd5429552cfa"
 dependencies = [
  "buffer-plz",
  "bytes",

@@ -1,65 +1,27 @@
-#![feature(impl_trait_in_bindings)]
-use std::io::{Read, copy};
+use std::io::copy;
 
 use bytes::{BufMut, BytesMut, buf::Writer};
 use header_plz::{
     body_headers::{
-        content_encoding::ContentEncoding,
-        encoding_info::{EncodingInfo, encodings_in_single_header, iter_encoding_header_positions},
-        parse::ParseBodyHeaders,
+        content_encoding::ContentEncoding, encoding_info::EncodingInfo, parse::ParseBodyHeaders,
     },
-    const_headers::TRANSFER_ENCODING,
     message_head::{MessageHead, info_line::InfoLine},
 };
 pub mod error;
 use crate::{convert::decompress::error::DEStruct, oneone::OneOne};
 use error::DecompressError;
-use std::io::Error;
-use thiserror::Error;
 
-pub fn apply_compression<T>(
+pub fn decompress_body<T>(
     one: &mut OneOne<T>,
+    mut main_body: BytesMut,
+    extra_body: Option<BytesMut>,
     encodings: &[EncodingInfo],
-    mut body: BytesMut,
-    mut extra_body: Option<BytesMut>,
     buf: &mut BytesMut,
-    ct_header: &str,
 ) -> Result<(BytesMut, Option<BytesMut>), DEStruct>
 where
     T: InfoLine,
     MessageHead<T>: ParseBodyHeaders,
 {
-    match decompress_body(body, extra_body.take(), encodings, buf) {
-        Ok(result) => {
-            if let Some(index) = encodings_in_single_header(&encodings) {
-                one.header_map_as_mut().remove_header_on_position(index);
-            } else {
-                let iter = iter_encoding_header_positions(&encodings);
-                for index in iter.rev() {
-                    one.header_map_as_mut().remove_header_on_position(index);
-                }
-            }
-            Ok(result)
-        }
-        Err(e) => {
-            /*
-            let ce = ContentEncoding::from(&e);
-            let pos = encodings.iter().position(|e| *e == ce).unwrap();
-            let to_remove = &encodings[..pos];
-            one.header_map_as_mut()
-                .remove_applied_compression(ct_header, to_remove);
-            */
-            Err(e)
-        }
-    }
-}
-
-pub fn decompress_body(
-    mut main_body: BytesMut,
-    extra_body: Option<BytesMut>,
-    encodings: &[EncodingInfo],
-    buf: &mut BytesMut,
-) -> Result<(BytesMut, Option<BytesMut>), DEStruct> {
     // Start
     let capacity = 2 * (main_body.len() + extra_body.as_ref().map(|b| b.len()).unwrap_or(0));
     buf.reserve(capacity);
@@ -69,7 +31,7 @@ pub fn decompress_body(
     if let Some(extra) = extra_body {
         let main_org_len = main_body.len();
         main_body.unsplit(extra);
-        match decompress(&main_body[..], &mut buf_writer, encodings) {
+        match decompress(one, &main_body[..], &mut buf_writer, encodings) {
             Ok(out) => return Ok((out, None)),
             Err(e) => {
                 if e.is_unknown_encoding() {
@@ -85,7 +47,7 @@ pub fn decompress_body(
         let extra = main_body.split_off(main_org_len);
 
         // 3. Try main
-        let main_decompressed = match decompress(&main_body[..], &mut buf_writer, encodings) {
+        let main_decompressed = match decompress(one, &main_body[..], &mut buf_writer, encodings) {
             Ok(buf) => buf,
             Err(mut e) => {
                 e.extra_body = Some(extra);
@@ -94,45 +56,62 @@ pub fn decompress_body(
         };
 
         // 4. extra decompressed separately
-        let extra_decompressed = match decompress(&extra[..], &mut buf_writer, encodings) {
+        let extra_decompressed = match decompress(one, &extra[..], &mut buf_writer, encodings) {
             Ok(out) => out,  // compressed separately
-            Err(e) => extra, // clear text ?
+            Err(_) => extra, // clear text ?
         };
         Ok((main_decompressed, Some(extra_decompressed)))
     } else {
-        let body = decompress(&main_body[..], &mut buf_writer, encodings)?;
+        let body = decompress(one, &main_body[..], &mut buf_writer, encodings)?;
         Ok((body, None))
     }
 }
 
-pub fn decompress(
+pub fn decompress<T>(
+    one: &mut OneOne<T>,
     compressed: &[u8],
     writer: &mut Writer<&mut BytesMut>,
     encoding_info: &[EncodingInfo],
-) -> Result<BytesMut, DEStruct> {
+) -> Result<BytesMut, DEStruct>
+where
+    T: InfoLine,
+    MessageHead<T>: ParseBodyHeaders,
+{
     let mut input: &[u8] = compressed;
     let mut output = writer.get_mut().split();
 
-    for (index, einfo) in encoding_info.iter().enumerate().rev() {
-        let result = match einfo.encoding() {
-            ContentEncoding::Brotli => decompress_brotli(input, writer),
-            ContentEncoding::Gzip => decompress_gzip(input, writer),
-            ContentEncoding::Deflate => decompress_deflate(input, writer),
-            ContentEncoding::Identity | ContentEncoding::Chunked => continue,
-            ContentEncoding::Zstd | ContentEncoding::Compress => decompress_zstd(input, writer),
-            ContentEncoding::Unknown(e) => Err(DecompressError::Unknown(e.to_string())),
-        };
+    for einfo in encoding_info.iter().rev() {
+        for (index, encoding) in einfo.encodings().iter().rev().enumerate() {
+            let result = match encoding {
+                ContentEncoding::Brotli => decompress_brotli(input, writer),
+                ContentEncoding::Gzip => decompress_gzip(input, writer),
+                ContentEncoding::Deflate => decompress_deflate(input, writer),
+                ContentEncoding::Identity | ContentEncoding::Chunked => continue,
+                ContentEncoding::Zstd | ContentEncoding::Compress => decompress_zstd(input, writer),
+                ContentEncoding::Unknown(e) => Err(DecompressError::Unknown(e.to_string())),
+            };
 
-        match result {
-            Ok(_) => {
-                output = writer.get_mut().split();
-                input = &output[..];
-            }
-            Err(e) => {
-                output = writer.get_mut().split();
-                return Err(DEStruct::new(index, output, None, e));
+            output = writer.get_mut().split();
+            match result {
+                Ok(_) => {
+                    input = &output[..];
+                }
+                Err(e) => {
+                    // truncate till compression in header
+                    let index = einfo.encodings().len() - index;
+                    if index > 0 {
+                        if let Some(encoding) = einfo.encodings().get(index) {
+                            one.header_map_as_mut()
+                                .truncate_header_value_on_position(einfo.header_index, encoding);
+                        }
+                    }
+                    return Err(DEStruct::new(output, None, e));
+                }
             }
         }
+        // remove the header in index
+        one.header_map_as_mut()
+            .remove_header_on_position(einfo.header_index);
     }
     Ok(output)
 }
@@ -187,12 +166,6 @@ mod tests {
     #[test]
     fn test_decompress() {
         let data = b"hello world";
-        let encodings = [
-            ContentEncoding::Brotli,
-            ContentEncoding::Deflate,
-            ContentEncoding::Gzip,
-            ContentEncoding::Zstd,
-        ];
         let mut compressed = BytesMut::new();
         let mut buf_writer = compressed.writer();
         // brotli
@@ -217,7 +190,14 @@ mod tests {
 
         let mut result = BytesMut::new();
         let mut_result = &mut result;
-        let mut writer = mut_result.writer();
+        let writer = mut_result.writer();
+
+        let encodings = [
+            ContentEncoding::Brotli,
+            ContentEncoding::Deflate,
+            ContentEncoding::Gzip,
+            ContentEncoding::Zstd,
+        ];
         //let out = decompress(&compressed[..], &mut writer, &encodings).unwrap();
         //assert_eq!(&out[..], &data[..]);
     }
