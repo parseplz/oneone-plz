@@ -237,7 +237,7 @@ where
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use buffer_plz::Cursor;
     use bytes::BytesMut;
     use header_plz::{Request, Response};
