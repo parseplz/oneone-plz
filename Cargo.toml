@@ -24,6 +24,3 @@ brotli = "8.0.0"
 flate2 = "1.1.0"
 zstd = "0.13.3"
 tokio = { version = "1.45.0", features = ["full"] }
-
-# [dev-dependencies]
-# tests-utils = { path = "tests-utils" }
