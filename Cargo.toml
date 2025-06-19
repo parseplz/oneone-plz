@@ -1,6 +1,6 @@
 [package]
 name = "oneone-plz"
-version = "0.0.1"
+version = "0.0.2"
 authors = ["darkseid", "sytten <emile@caido.io>"]
 description = "HTTP/1 parser for the ParsePlz ecosystem"
 repository = "https://github.com/parseplz/oneone-plz"
@@ -24,3 +24,6 @@ brotli = "8.0.0"
 flate2 = "1.1.0"
 zstd = "0.13.3"
 tokio = { version = "1.45.0", features = ["full"] }
+
+# [dev-dependencies]
+# tests-utils = { path = "tests-utils" }

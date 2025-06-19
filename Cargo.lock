@@ -61,13 +61,26 @@ checksum = "5c8214115b7bf84099f1309324e63141d4c5d7cc26862f97a0a857dbefe165bd"
 
 [[package]]
 name = "body-plz"
+version = "0.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2fee6b25900027c6cab8c16b65d43f1cc8e6b6184a7e287624b8dca6da2acfb3"
+dependencies = [
+ "buffer-plz 0.0.2",
+ "bytes",
+ "header-plz 0.0.2",
+ "thiserror",
+ "tracing",
+]
+
+[[package]]
+name = "body-plz"
 version = "0.0.25"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8d2ce55ab11bee0065cf886cf686db7510ec606d875f5759b6fb39d6a134cf66"
 dependencies = [
- "buffer-plz",
+ "buffer-plz 0.0.3",
  "bytes",
- "header-plz",
+ "header-plz 0.0.21",
  "thiserror",
  "tracing",
 ]
@@ -91,6 +104,15 @@ checksum = "874bb8112abecc98cbd6d81ea4fa7e94fb9449648c93cc89aa40c81c24d7de03"
 dependencies = [
  "alloc-no-stdlib",
  "alloc-stdlib",
+]
+
+[[package]]
+name = "buffer-plz"
+version = "0.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "32b71d9230fe8b40f9736014ff6d9dfb3701440bb575f112b704b9bee98e4388"
+dependencies = [
+ "bytes",
 ]
 
 [[package]]
@@ -170,11 +192,24 @@ checksum = "07e28edb80900c19c28f1072f2e8aeca7fa06b23cd4169cefe1af5aa3260783f"
 
 [[package]]
 name = "header-plz"
+version = "0.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f48d53afc65556d973222157aa2f524cc4a1ad8e5121f0d89fb3392c0268d545"
+dependencies = [
+ "buffer-plz 0.0.2",
+ "bytes",
+ "mime-plz",
+ "thiserror",
+ "tracing",
+]
+
+[[package]]
+name = "header-plz"
 version = "0.0.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ee9faaa7d53d4eee870962f4f49e109e56df69ea23d1a7b970daec57bb58960e"
 dependencies = [
- "buffer-plz",
+ "buffer-plz 0.0.3",
  "bytes",
  "http",
  "mime-plz",
@@ -287,16 +322,35 @@ checksum = "42f5e15c9953c5e4ccceeb2e7382a716482c34515315f7b03532b8b4e8393d2d"
 name = "oneone-plz"
 version = "0.0.1"
 dependencies = [
- "body-plz",
+ "body-plz 0.0.25",
  "brotli",
- "buffer-plz",
+ "buffer-plz 0.0.3",
  "bytes",
  "flate2",
- "header-plz",
+ "header-plz 0.0.21",
  "mime-plz",
- "protocol-traits-plz",
+ "protocol-traits-plz 0.0.4",
+ "tests-utils",
  "thiserror",
  "tokio",
+ "zstd",
+]
+
+[[package]]
+name = "oneone-plz"
+version = "0.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a2b9fbe1bc0417ab29720f0dd419c7a0414479897ffd4141b003b2012eb63ef4"
+dependencies = [
+ "body-plz 0.0.2",
+ "brotli",
+ "buffer-plz 0.0.2",
+ "bytes",
+ "flate2",
+ "header-plz 0.0.2",
+ "mime-plz",
+ "protocol-traits-plz 0.0.2",
+ "thiserror",
  "zstd",
 ]
 
@@ -346,11 +400,21 @@ dependencies = [
 
 [[package]]
 name = "protocol-traits-plz"
+version = "0.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "319ac12c744e45d44c47467720816ef65fe3831c2c455746cda025892b6554ef"
+dependencies = [
+ "buffer-plz 0.0.2",
+ "bytes",
+]
+
+[[package]]
+name = "protocol-traits-plz"
 version = "0.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9662df88cc5348cb41dde516c04ae0ed5c69a375a80ec26ad43fea3c6b10f562"
 dependencies = [
- "buffer-plz",
+ "buffer-plz 0.0.3",
  "bytes",
 ]
 
@@ -468,6 +532,19 @@ dependencies = [
  "proc-macro2",
  "quote",
  "unicode-ident",
+]
+
+[[package]]
+name = "tests-utils"
+version = "0.1.0"
+dependencies = [
+ "body-plz 0.0.25",
+ "buffer-plz 0.0.3",
+ "bytes",
+ "header-plz 0.0.21",
+ "mime-plz",
+ "oneone-plz 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "protocol-traits-plz 0.0.4",
 ]
 
 [[package]]
