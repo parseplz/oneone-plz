@@ -1,6 +1,6 @@
 use buffer_plz::{Cursor, Event};
 use bytes::BytesMut;
-use header_plz::Response;
+use header_plz::{Request, Response};
 use oneone_plz::error::HttpReadError;
 use oneone_plz::{oneone::OneOne, state::State};
 use protocol_traits_plz::Frame;
@@ -16,10 +16,10 @@ fn test_response_chunked_one() {
                  5\r\n\
                  world\r\n\
                  0\r\n\r\n";
-    let response = parse_full_single::<Response>(input.as_bytes());
     let verify = "HTTP/1.1 200 OK\r\n\
                   Content-Length: 11\r\n\r\n\
                   hello world";
+    let response = parse_full_single::<Response>(input.as_bytes());
     assert_eq!(response.into_bytes(), verify);
 }
 

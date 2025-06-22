@@ -7,6 +7,7 @@ use oneone_plz::{oneone::OneOne, state::State};
 use protocol_traits_plz::Frame;
 use protocol_traits_plz::Step;
 
+mod body_close;
 mod chunked;
 mod content_length;
 mod headers;
