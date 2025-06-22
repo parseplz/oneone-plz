@@ -4,8 +4,7 @@ use header_plz::Response;
 use oneone_plz::{oneone::OneOne, state::State};
 use protocol_traits_plz::Frame;
 use protocol_traits_plz::Step;
-
-use crate::parse_full_multiple;
+use test_utilities::parse_full_multiple;
 
 #[test]
 fn test_response_te_gzip() {

@@ -1,0 +1,15 @@
+[package]
+name = "test-utilities"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+# primitives
+body-plz = { workspace = true }
+buffer-plz = { workspace = true }
+header-plz = { workspace = true }
+protocol-traits-plz = { workspace = true }
+oneone-plz = { path = ".." }
+
+# basic
+bytes = { workspace = true }

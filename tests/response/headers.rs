@@ -4,9 +4,8 @@ use header_plz::Response;
 use oneone_plz::{error::HttpReadError, oneone::OneOne, state::State};
 use protocol_traits_plz::Frame;
 use protocol_traits_plz::Step;
-
-use crate::parse_full_multiple;
-use crate::parse_full_single;
+use test_utilities::parse_full_multiple;
+use test_utilities::parse_full_single;
 
 #[test]
 fn test_response_message_head_single() {

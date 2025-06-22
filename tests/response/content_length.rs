@@ -1,4 +1,4 @@
-use crate::{parse_full_multiple, parse_full_single, poll_first};
+use test_utilities::{parse_full_multiple, parse_full_single, poll_first};
 
 use buffer_plz::{Cursor, Event};
 use bytes::BytesMut;

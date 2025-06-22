@@ -7,13 +7,12 @@ use oneone_plz::{oneone::OneOne, state::State};
 use protocol_traits_plz::Frame;
 use protocol_traits_plz::Step;
 
-use crate::parse_full_single;
-use crate::poll_first;
 mod chunked;
 mod content_length;
 mod headers;
 mod transfer_encoding;
 
+/*
 // #[test]
 // FIX
 fn test_response_te_unknown() {
@@ -34,3 +33,4 @@ fn test_response_content_length_deflate() {
                   hello world";
     assert_eq!(response.into_bytes(), verify);
 }
+*/
