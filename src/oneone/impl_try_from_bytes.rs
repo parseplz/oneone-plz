@@ -1,0 +1,92 @@
+use body_plz::variants::Body;
+use bytes::BytesMut;
+use header_plz::{
+    InfoLine, abnf::HEADER_DELIMITER, body_headers::parse::ParseBodyHeaders,
+    const_headers::CONTENT_LENGTH, message_head::MessageHead,
+};
+
+use crate::oneone::{OneOne, update::error::UpdateFrameError};
+
+/* Description:
+ *      Update oneone from BytesMut.
+ *      Used when request/response is modified in interceptor. No chunked body,
+ *      as chunked is converted to Content-Length by convert_one_dot_one()
+ *
+ * Steps:
+ *      1. Find HEADER_DELIMITER (2 * CRLF) in buf.
+ *      2. Split buf at index.
+ *      3. Build OneOne.
+ *      4. if buf !empty, i.e. body is present.
+ *          a. set body.
+ *          b. If CL header is present, update Content-Length by calling
+ *         update_content_length()
+ *          c. Else add, new CL header.
+ *
+ * Error:
+ *      UpdateFrameError::UnableToFindCRLF  [1]
+ *      UpdateFrameError::HttpDecodeError   [3]
+ */
+
+impl<T> TryFrom<BytesMut> for OneOne<T>
+where
+    T: InfoLine,
+    MessageHead<T>: ParseBodyHeaders,
+{
+    type Error = UpdateFrameError;
+
+    fn try_from(mut buf: BytesMut) -> Result<Self, Self::Error> {
+        // 1. Find HEADER_DELIMITER (2 * CRLF) in buf.
+        let index = buf
+            .windows(4)
+            .position(|window| window == HEADER_DELIMITER)
+            .ok_or(UpdateFrameError::UnableToFindCRLF)?;
+        let message_head = buf.split_to(index + HEADER_DELIMITER.len());
+        let mut one: OneOne<T> = OneOne::try_from_message_head_buf(message_head)?;
+        // 4. Body is present
+        if !buf.is_empty() {
+            let len = buf.len().to_string();
+            // 4.a. set body
+            one.set_body(Body::Raw(buf));
+            if !one
+                .header_map_as_mut()
+                .update_header_value_on_key(CONTENT_LENGTH, len.as_str())
+            {
+                one.add_header(CONTENT_LENGTH, &len);
+            }
+        }
+        Ok(one)
+    }
+}
+
+#[cfg(test)]
+mod test {
+
+    use header_plz::Request;
+    use protocol_traits_plz::Frame;
+
+    use super::*;
+
+    #[test]
+    fn update_content_lenght_less() {
+        let buf = BytesMut::from("POST / HTTP/1.1\r\nContent-Length: 10\r\n\r\na");
+        let req = OneOne::<Request>::try_from(buf).unwrap();
+        let verify = BytesMut::from("POST / HTTP/1.1\r\nContent-Length: 1\r\n\r\na");
+        assert_eq!(req.into_bytes(), verify);
+    }
+
+    #[test]
+    fn update_content_length_more() {
+        let buf = BytesMut::from("POST / HTTP/1.1\r\nContent-Length: 0\r\n\r\nHello");
+        let req = OneOne::<Request>::try_from(buf).unwrap();
+        let verify = BytesMut::from("POST / HTTP/1.1\r\nContent-Length: 5\r\n\r\nHello");
+        assert_eq!(req.into_bytes(), verify);
+    }
+
+    #[test]
+    fn update_content_length_no_cl() {
+        let buf = BytesMut::from("POST / HTTP/1.1\r\n\r\nHello");
+        let req = OneOne::<Request>::try_from(buf).unwrap();
+        let verify = BytesMut::from("POST / HTTP/1.1\r\nContent-Length: 5\r\n\r\nHello");
+        assert_eq!(req.into_bytes(), verify);
+    }
+}

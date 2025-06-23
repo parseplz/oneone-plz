@@ -252,8 +252,8 @@ mod test {
         gz.read_to_end(&mut compressed).unwrap();
 
         // zstd
-        let compressed = zstd::encode_all(&compressed[..], 1).unwrap();
-        compressed
+
+        zstd::encode_all(&compressed[..], 1).unwrap()
     }
 
     #[test]
@@ -279,7 +279,7 @@ mod test {
         state = state.try_next(event).unwrap();
         let one: OneOne<Response> = state.try_into_frame().unwrap();
 
-        let mut verify = "HTTP/1.1 200 OK\r\n\
+        let verify = "HTTP/1.1 200 OK\r\n\
             Host: reqbin.com\r\n\
             Content-Type: text/plain\r\n\
             Content-Length: 11\r\n\r\n\

@@ -40,7 +40,8 @@ mod test {
                      Host: reqbin.com\r\n\
                      Content-Type: text/plain\r\n\r\n";
 
-        let mut one: OneOne<Response> = OneOne::try_from(BytesMut::from(input)).unwrap();
+        let mut one: OneOne<Response> =
+            OneOne::try_from_message_head_buf(BytesMut::from(input)).unwrap();
         update_content_length(&mut one, 23);
         let verify = "HTTP/1.1 200 OK\r\n\
                       Host: reqbin.com\r\n\
@@ -56,7 +57,8 @@ mod test {
                      Content-Type: text/plain\r\n\
                      Content-Length: 23\r\n\r\n";
 
-        let mut one: OneOne<Response> = OneOne::try_from(BytesMut::from(input)).unwrap();
+        let mut one: OneOne<Response> =
+            OneOne::try_from_message_head_buf(BytesMut::from(input)).unwrap();
         update_content_length(&mut one, 27);
         let verify = "HTTP/1.1 200 OK\r\n\
                       Host: reqbin.com\r\n\

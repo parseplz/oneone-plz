@@ -14,7 +14,7 @@ use super::*;
 
 impl UpdateHttp for OneOne<Request> {
     fn update(buf: BytesMut) -> Result<Self, UpdateFrameError> {
-        let mut req = update_one_one::<Request>(buf)?;
+        let mut req = OneOne::<Request>::try_from(buf)?;
         if METHODS_WITH_BODY.contains(&req.method_as_enum()) {
             // If No content length header is present
             if req.has_header_key(CONTENT_LENGTH).is_none() {

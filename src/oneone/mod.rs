@@ -8,7 +8,8 @@ use header_plz::{
     message_head::MessageHead,
 };
 use protocol_traits_plz::Frame;
-pub mod impl_try_from;
+pub mod impl_try_from_bytes;
+pub mod impl_try_from_state;
 
 use crate::convert::chunked::partial_chunked_to_raw;
 
@@ -37,6 +38,13 @@ where
             body_headers,
             body: None,
         }
+    }
+
+    // parse from message_head
+    pub fn try_from_message_head_buf(buf: BytesMut) -> Result<Self, HeaderReadError> {
+        let message_head = MessageHead::<T>::try_from(buf)?;
+        let body_headers = message_head.parse_body_headers();
+        Ok(OneOne::<T>::new(message_head, body_headers))
     }
 
     // Header Related methods
@@ -125,19 +133,5 @@ where
             header.unsplit(body);
         }
         header
-    }
-}
-
-impl<T> TryFrom<BytesMut> for OneOne<T>
-where
-    T: InfoLine,
-    MessageHead<T>: ParseBodyHeaders,
-{
-    type Error = HeaderReadError;
-
-    fn try_from(buf: BytesMut) -> Result<Self, Self::Error> {
-        let message_head = MessageHead::<T>::try_from(buf)?;
-        let body_headers = message_head.parse_body_headers();
-        Ok(OneOne::<T>::new(message_head, body_headers))
     }
 }

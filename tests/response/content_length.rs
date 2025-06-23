@@ -1,5 +1,3 @@
-use oneone_plz::error::HttpReadError;
-
 use super::*;
 
 #[test]
@@ -192,13 +190,13 @@ fn test_response_cl_no_body_no_fix() {
 fn test_response_cl_no_body_fix() {
     let input = "HTTP/1.1 200 OK\r\n\
                  Content-Length: 5\r\n\r\n";
+    let verify = "HTTP/1.1 200 OK\r\n\
+                  Content-Length: 0\r\n\r\n";
     let mut buf = BytesMut::from(input.as_bytes());
     let mut cbuf = Cursor::new(&mut buf);
     let state = poll_first::<Response>(&mut cbuf);
     if let Err(e) = state.try_next(Event::End(&mut cbuf)) {
         matches!(e, HttpReadError::ContentLengthPartial(_, _));
-        let verify = "HTTP/1.1 200 OK\r\n\
-                      Content-Length: 0\r\n\r\n";
         assert_eq!(
             verify,
             OneOne::<Response>::try_from(e).unwrap().into_bytes()

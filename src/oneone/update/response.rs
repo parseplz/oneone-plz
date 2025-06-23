@@ -4,7 +4,7 @@ use super::*;
 
 impl UpdateHttp for OneOne<Response> {
     fn update(buf: BytesMut) -> Result<Self, UpdateFrameError> {
-        update_one_one::<Response>(buf)
+        OneOne::<Response>::try_from(buf)
     }
 }
 

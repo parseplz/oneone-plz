@@ -14,7 +14,7 @@ use protocol_traits_plz::Step;
 
 use crate::{
     error::HttpReadError,
-    oneone::{OneOne, impl_try_from::FrameError},
+    oneone::{OneOne, impl_try_from_state::FrameError},
 };
 
 #[cfg_attr(test, derive(PartialEq, Eq))]
@@ -62,7 +62,7 @@ where
 
     #[allow(clippy::result_large_err)]
     fn build_oneone(headers: BytesMut) -> Result<Self, HttpReadError<T>> {
-        let mut one = OneOne::try_from(headers)?;
+        let mut one = OneOne::try_from_message_head_buf(headers)?;
         let next_state = match one.body_headers() {
             None => Self::End(one),
             Some(body_headers) => match body_headers.transfer_type {

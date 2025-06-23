@@ -4,6 +4,7 @@ mod response;
 use buffer_plz::{Cursor, Event};
 use bytes::BytesMut;
 use header_plz::{InfoLine, body_headers::parse::ParseBodyHeaders, message_head::MessageHead};
+use oneone_plz::error::HttpReadError;
 use oneone_plz::{oneone::OneOne, state::State};
 use protocol_traits_plz::Step;
 
