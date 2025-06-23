@@ -57,36 +57,3 @@ where
         Ok(one)
     }
 }
-
-#[cfg(test)]
-mod test {
-
-    use header_plz::Request;
-    use protocol_traits_plz::Frame;
-
-    use super::*;
-
-    #[test]
-    fn update_content_lenght_less() {
-        let buf = BytesMut::from("POST / HTTP/1.1\r\nContent-Length: 10\r\n\r\na");
-        let req = OneOne::<Request>::try_from(buf).unwrap();
-        let verify = BytesMut::from("POST / HTTP/1.1\r\nContent-Length: 1\r\n\r\na");
-        assert_eq!(req.into_bytes(), verify);
-    }
-
-    #[test]
-    fn update_content_length_more() {
-        let buf = BytesMut::from("POST / HTTP/1.1\r\nContent-Length: 0\r\n\r\nHello");
-        let req = OneOne::<Request>::try_from(buf).unwrap();
-        let verify = BytesMut::from("POST / HTTP/1.1\r\nContent-Length: 5\r\n\r\nHello");
-        assert_eq!(req.into_bytes(), verify);
-    }
-
-    #[test]
-    fn update_content_length_no_cl() {
-        let buf = BytesMut::from("POST / HTTP/1.1\r\n\r\nHello");
-        let req = OneOne::<Request>::try_from(buf).unwrap();
-        let verify = BytesMut::from("POST / HTTP/1.1\r\nContent-Length: 5\r\n\r\nHello");
-        assert_eq!(req.into_bytes(), verify);
-    }
-}

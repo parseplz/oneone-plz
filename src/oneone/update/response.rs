@@ -7,16 +7,3 @@ impl UpdateHttp for OneOne<Response> {
         OneOne::<Response>::try_from(buf)
     }
 }
-
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    #[test]
-    fn update_response() {
-        let buf = BytesMut::from("HTTP/1.1 200 OK\r\n\r\nhello");
-        let req = OneOne::<Response>::update(buf).unwrap();
-        let verify = "HTTP/1.1 200 OK\r\nContent-Length: 5\r\n\r\nhello";
-        assert_eq!(req.into_bytes(), verify);
-    }
-}

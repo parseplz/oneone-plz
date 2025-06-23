@@ -1,7 +1,7 @@
 use super::*;
 
 #[test]
-fn test_response_body_close() {
+fn test_response_state_body_close() {
     let input = "HTTP/1.1 200 OK\r\n\
                  Host: reqbin.com\r\n\
                  Content-Type: text/plain\r\n\r\n\

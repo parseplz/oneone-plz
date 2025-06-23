@@ -15,7 +15,7 @@ use crate::convert::chunked::partial_chunked_to_raw;
 
 mod request;
 mod response;
-mod update;
+pub mod update;
 
 #[cfg_attr(any(test, debug_assertions), derive(Debug, PartialEq, Eq))]
 pub struct OneOne<T>

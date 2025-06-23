@@ -25,32 +25,3 @@ impl UpdateHttp for OneOne<Request> {
         Ok(req)
     }
 }
-
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    #[test]
-    fn update_request_post_no_body() {
-        let buf = BytesMut::from("POST / HTTP/1.1\r\n\r\n");
-        let req = OneOne::<Request>::update(buf).unwrap();
-        let verify = "POST / HTTP/1.1\r\nContent-Length: 0\r\n\r\n";
-        assert_eq!(req.into_bytes(), verify);
-    }
-
-    #[test]
-    fn update_request_post_with_body() {
-        let buf = BytesMut::from("POST / HTTP/1.1\r\nContent-Length: 10\r\n\r\na");
-        let req = OneOne::<Request>::update(buf).unwrap();
-        let verify = "POST / HTTP/1.1\r\nContent-Length: 1\r\n\r\na";
-        assert_eq!(req.into_bytes(), verify);
-    }
-
-    #[test]
-    fn update_request_no_cl() {
-        let buf = BytesMut::from("POST / HTTP/1.1\r\n\r\n");
-        let req = OneOne::<Request>::update(buf).unwrap();
-        let verify = "POST / HTTP/1.1\r\nContent-Length: 0\r\n\r\n";
-        assert_eq!(req.into_bytes(), verify);
-    }
-}

@@ -1,29 +1,27 @@
 use super::*;
 
 #[test]
-fn test_response_content_length_basic() {
+fn test_response_state_content_length() {
     let input = "HTTP/1.1 200 OK\r\n\
                  Content-Length: 5\r\n\r\n\
                  hello";
     let response = parse_full_single::<Response>(input.as_bytes());
     assert_eq!(response.status_code(), "200");
-    let result = response.into_bytes();
-    assert_eq!(result, input);
+    assert_eq!(response.into_bytes(), input);
 }
 
 #[test]
-fn test_response_content_length_zero() {
+fn test_response_state_content_length_zero() {
     let input = "HTTP/1.1 307 OK\r\n\
                  Location: /index.html\r\n\
                  Content-Length: 0\r\n\r\n";
     let response = parse_full_single::<Response>(input.as_bytes());
     assert_eq!(response.status_code(), "307");
-    let result = response.into_bytes();
-    assert_eq!(result, input);
+    assert_eq!(response.into_bytes(), input);
 }
 
 #[test]
-fn test_response_content_length_brotli() {
+fn test_response_state_content_length_brotli() {
     let input = b"HTTP/1.1 200 OK\r\n\
                 Content-Length: 15\r\n\
                 Content-Encoding: br\r\n\r\n\
@@ -37,7 +35,7 @@ fn test_response_content_length_brotli() {
 }
 
 #[test]
-fn test_response_content_length_gzip() {
+fn test_response_state_content_length_gzip() {
     let input = b"HTTP/1.1 200 OK\r\n\
                 Content-Length: 41\r\n\
                 Content-Encoding: gzip\r\n\r\n\
@@ -50,7 +48,7 @@ fn test_response_content_length_gzip() {
 }
 
 #[test]
-fn test_response_content_length_zstd() {
+fn test_response_state_content_length_zstd() {
     let input = b"HTTP/1.1 200 OK\r\n\
                 Content-Length: 24\r\n\
                 Content-Encoding: zstd\r\n\r\n\
@@ -63,16 +61,19 @@ fn test_response_content_length_zstd() {
 }
 
 #[test]
-fn test_response_cl_large() {
+fn test_response_state_content_length_large() {
     let mut input = "HTTP/1.1 200 OK\r\n\
                      Content-Length: 1100\r\n\r\n"
         .to_string();
     input.push_str(&"hello world".repeat(100));
-    let _ = parse_full_single::<Response>(input.as_bytes());
+    let verify = input.clone();
+    let response = parse_full_single::<Response>(input.as_bytes());
+    assert_eq!(response.status_code(), "200");
+    assert_eq!(response.into_bytes(), verify);
 }
 
 #[test]
-fn test_response_cl_extra_single() {
+fn test_response_state_content_length_extra() {
     let input = "HTTP/1.1 200 OK\r\n\
                  Content-Length: 5\r\n\r\n\
                  hello world more data";
@@ -88,7 +89,7 @@ fn test_response_cl_extra_single() {
 }
 
 #[test]
-fn test_response_cl_extra_multiple() {
+fn test_response_state_content_length_extra_multiple() {
     let chunks: &[&[u8]] = &[
         b"HTTP/1.1 200 OK\r\nContent-Length: 10\r\n\r\nh",
         b"ello world more data",
@@ -101,7 +102,7 @@ fn test_response_cl_extra_multiple() {
 }
 
 #[test]
-fn test_response_cl_extra_finished_end_single() {
+fn test_response_state_content_length_extra_finished_end_single() {
     let chunks: &[&[u8]] = &[
         b"HTTP/1.1 200 OK\r\nContent-Length: 5\r\n\r\nhello",
         b" world more data added",
@@ -114,7 +115,7 @@ fn test_response_cl_extra_finished_end_single() {
 }
 
 #[test]
-fn test_response_cl_extra_finished_read_end_multiple() {
+fn test_response_state_content_length_extra_finished_read_end_multiple() {
     let chunks: &[&[u8]] = &[
         b"HTTP/1.1 200 OK\r\nContent-Length: 5\r\n\r\nhello",
         b" world more data ",
@@ -128,7 +129,7 @@ fn test_response_cl_extra_finished_read_end_multiple() {
 }
 
 #[test]
-fn test_response_cl_partial_no_fix() {
+fn test_response_state_content_length_partial_no_fix() {
     let input = "HTTP/1.1 200 OK\r\n\
                  Content-Length: 5\r\n\r\n\
                  h";
@@ -148,7 +149,7 @@ fn test_response_cl_partial_no_fix() {
 }
 
 #[test]
-fn test_response_cl_partial_fix() {
+fn test_response_state_content_length_partial_fix() {
     let input = "HTTP/1.1 200 OK\r\n\
                  Content-Length: 5\r\n\r\n\
                  h";
@@ -170,7 +171,7 @@ fn test_response_cl_partial_fix() {
 }
 
 #[test]
-fn test_response_cl_no_body_no_fix() {
+fn test_response_state_content_length_no_body_no_fix() {
     let input = "HTTP/1.1 200 OK\r\n\
                  Content-Length: 5\r\n\r\n";
     let mut buf = BytesMut::from(input.as_bytes());
@@ -187,7 +188,7 @@ fn test_response_cl_no_body_no_fix() {
 }
 
 #[test]
-fn test_response_cl_no_body_fix() {
+fn test_response_state_content_length_no_body_fix() {
     let input = "HTTP/1.1 200 OK\r\n\
                  Content-Length: 5\r\n\r\n";
     let verify = "HTTP/1.1 200 OK\r\n\
@@ -207,7 +208,7 @@ fn test_response_cl_no_body_fix() {
 }
 
 #[test]
-fn test_response_missing_cl_with_body() {
+fn test_response_state_content_length_missing_cl_header_with_body() {
     let input = "HTTP/1.1 200 OK\r\n\r\n\
                  HELLO WORLD";
 
@@ -224,7 +225,7 @@ fn test_response_missing_cl_with_body() {
 }
 
 #[test]
-fn test_response_missing_cl_with_extra_body() {
+fn test_response_state_content_length_missing_cl_header_with_extra_body() {
     let input = "HTTP/1.1 200 OK\r\n\r\n\
                  HELLO WORLD\n\
                  MORE DATA";
