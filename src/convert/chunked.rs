@@ -71,7 +71,7 @@ mod test {
     use super::*;
 
     #[test]
-    fn test_convert_chunked() {
+    fn test_chunked_to_raw() {
         let req = "POST /echo HTTP/1.1\r\n\
                   Host: reqbin.com\r\n\
                   Trailer: Some\r\n\
@@ -107,7 +107,7 @@ mod test {
     }
 
     #[test]
-    fn test_convert_chunked_extra() {
+    fn test_chunked_to_raw_extra_body() {
         let req = "POST /echo HTTP/1.1\r\n\
                   Host: reqbin.com\r\n\
                   Trailer: Some\r\n\

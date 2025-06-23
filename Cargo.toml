@@ -6,12 +6,8 @@ description = "HTTP/1 parser for the ParsePlz ecosystem"
 repository = "https://github.com/parseplz/oneone-plz"
 license = "MIT"
 edition = "2024"
-resolver = "3"
 
-[workspace]
-members = ["test-utilities"]
-
-[workspace.dependencies]
+[dependencies]
 # primitives
 body-plz = "0.0.25"
 buffer-plz = "0.0.3"
@@ -20,23 +16,9 @@ protocol-traits-plz = "0.0.4"
 
 # basic 
 bytes = "1.10.1"
-
-[dependencies]
-# primitives
-body-plz = { workspace = true }
-buffer-plz = { workspace = true }
-header-plz = { workspace = true }
-protocol-traits-plz = { workspace = true }
-mime-plz = "0.0.2"
-
-# basic
-bytes = { workspace = true }
 thiserror = "2.0.12"
 
 # compression
 brotli = "8.0.0"
 flate2 = "1.1.0"
 zstd = "0.13.3"
-
-[dev-dependencies]
-test-utilities = { path = "test-utilities" }

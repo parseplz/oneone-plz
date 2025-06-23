@@ -1,11 +1,6 @@
-use buffer_plz::{Cursor, Event};
-use bytes::BytesMut;
-use header_plz::{Request, Response};
 use oneone_plz::error::HttpReadError;
-use oneone_plz::{oneone::OneOne, state::State};
-use protocol_traits_plz::Frame;
-use protocol_traits_plz::Step;
-use test_utilities::{parse_full_single, poll_first};
+
+use super::*;
 
 #[test]
 fn test_response_chunked_one() {
@@ -202,7 +197,7 @@ fn test_chunked_partial() {
     let verify = buf.clone();
 
     let mut cbuf = Cursor::new(&mut buf);
-    let mut state = poll_first::<Response>(&mut cbuf);
+    let state = poll_first::<Response>(&mut cbuf);
     if let Err(e) = state.try_next(Event::End(&mut cbuf)) {
         matches!(e, HttpReadError::ChunkReaderPartial(_, _));
         assert_eq!(verify, BytesMut::from(e));

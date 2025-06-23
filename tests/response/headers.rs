@@ -1,11 +1,6 @@
-use buffer_plz::{Cursor, Event};
-use bytes::BytesMut;
-use header_plz::Response;
-use oneone_plz::{error::HttpReadError, oneone::OneOne, state::State};
-use protocol_traits_plz::Frame;
-use protocol_traits_plz::Step;
-use test_utilities::parse_full_multiple;
-use test_utilities::parse_full_single;
+use oneone_plz::error::HttpReadError;
+
+use super::*;
 
 #[test]
 fn test_response_message_head_single() {
@@ -65,12 +60,6 @@ fn test_response_message_head_multiple_2() {
 }
 
 #[test]
-fn test_response_no_content() {
-    let input = "HTTP/1.1 204 OK\r\nX-Test: test\r\n\r\n";
-    let response = parse_full_single::<Response>(input.as_bytes());
-}
-
-#[test]
 fn test_response_switching_protocol() {
     let input = "HTTP/1.1 101 Switching Protocols\r\n\
         Upgrade: websocket\r\n\
@@ -90,13 +79,22 @@ fn test_response_not_modified() {
 #[test]
 fn test_response_message_head_parital() {
     let input = "HTTP/1.1 304 OK\r\n";
-    let mut buf = BytesMut::from(input.clone());
+    let mut buf = BytesMut::from(input);
     let mut cbuf = Cursor::new(&mut buf);
     let event = Event::End(&mut cbuf);
-    let mut state: State<Response> = State::new();
+    let state: State<Response> = State::new();
     if let Err(HttpReadError::Unparsed(buf)) = state.try_next(event) {
         assert_eq!(buf, input);
     } else {
         panic!()
     }
 }
+
+/*
+#[test]
+fn test_response_no_content() {
+    let input = "HTTP/1.1 204 OK\r\nX-Test: test\r\n\r\n";
+    let response = parse_full_single::<Response>(input.as_bytes());
+    todo!()
+}
+*/

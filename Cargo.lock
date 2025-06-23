@@ -227,9 +227,7 @@ dependencies = [
  "bytes",
  "flate2",
  "header-plz",
- "mime-plz",
  "protocol-traits-plz",
- "test-utilities",
  "thiserror",
  "zstd",
 ]
@@ -333,18 +331,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "unicode-ident",
-]
-
-[[package]]
-name = "test-utilities"
-version = "0.1.0"
-dependencies = [
- "body-plz",
- "buffer-plz",
- "bytes",
- "header-plz",
- "oneone-plz",
- "protocol-traits-plz",
 ]
 
 [[package]]

@@ -1,13 +1,6 @@
-use test_utilities::{parse_full_multiple, parse_full_single, poll_first};
-
-use buffer_plz::{Cursor, Event};
-use bytes::BytesMut;
-use header_plz::{Request, Response};
 use oneone_plz::error::HttpReadError;
-use oneone_plz::{oneone::OneOne, state::State};
 
-use protocol_traits_plz::Frame;
-use protocol_traits_plz::Step;
+use super::*;
 
 #[test]
 fn test_response_content_length_basic() {
@@ -143,7 +136,7 @@ fn test_response_cl_partial_no_fix() {
                  h";
     let mut buf = BytesMut::from(input.as_bytes());
     let mut cbuf = Cursor::new(&mut buf);
-    let mut state = poll_first::<Response>(&mut cbuf);
+    let state = poll_first::<Response>(&mut cbuf);
     let response = state.try_next(Event::End(&mut cbuf));
     if let Err(e) = response {
         assert!(matches!(e, HttpReadError::ContentLengthPartial(_, _)));
@@ -163,7 +156,7 @@ fn test_response_cl_partial_fix() {
                  h";
     let mut buf = BytesMut::from(input.as_bytes());
     let mut cbuf = Cursor::new(&mut buf);
-    let mut state = poll_first::<Response>(&mut cbuf);
+    let state = poll_first::<Response>(&mut cbuf);
     if let Err(e) = state.try_next(Event::End(&mut cbuf)) {
         assert!(matches!(e, HttpReadError::ContentLengthPartial(_, _)));
         let verify = "HTTP/1.1 200 OK\r\n\
@@ -184,7 +177,7 @@ fn test_response_cl_no_body_no_fix() {
                  Content-Length: 5\r\n\r\n";
     let mut buf = BytesMut::from(input.as_bytes());
     let mut cbuf = Cursor::new(&mut buf);
-    let mut state = poll_first::<Response>(&mut cbuf);
+    let state = poll_first::<Response>(&mut cbuf);
     if let Err(e) = state.try_next(Event::End(&mut cbuf)) {
         matches!(e, HttpReadError::ContentLengthPartial(_, _));
         let verify = "HTTP/1.1 200 OK\r\n\
@@ -201,7 +194,7 @@ fn test_response_cl_no_body_fix() {
                  Content-Length: 5\r\n\r\n";
     let mut buf = BytesMut::from(input.as_bytes());
     let mut cbuf = Cursor::new(&mut buf);
-    let mut state = poll_first::<Response>(&mut cbuf);
+    let state = poll_first::<Response>(&mut cbuf);
     if let Err(e) = state.try_next(Event::End(&mut cbuf)) {
         matches!(e, HttpReadError::ContentLengthPartial(_, _));
         let verify = "HTTP/1.1 200 OK\r\n\
