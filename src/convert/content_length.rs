@@ -15,13 +15,11 @@ where
     // 1. If cl present update cl
     match one.has_header_key(CONTENT_LENGTH) {
         Some(pos) => {
-            one.header_map_as_mut()
-                .update_header_value_on_position(pos, &len_string);
+            one.update_header_value_on_position(pos, &len_string);
         }
         None => {
             // 2. else add new cl
-            let content_length_header = (CONTENT_LENGTH, len_string.as_str()).into();
-            one.header_map_as_mut().add_header(content_length_header);
+            one.add_header(CONTENT_LENGTH, len_string.as_str());
         }
     }
 }

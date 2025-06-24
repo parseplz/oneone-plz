@@ -8,6 +8,15 @@ use oneone_plz::error::HttpReadError;
 use oneone_plz::{oneone::OneOne, state::State};
 use protocol_traits_plz::Step;
 
+pub fn poll_first<T>(buf: &mut Cursor<'_>) -> State<T>
+where
+    T: InfoLine + std::fmt::Debug,
+    MessageHead<T>: ParseBodyHeaders,
+{
+    let state: State<T> = State::new();
+    state.try_next(Event::Read(buf)).unwrap()
+}
+
 pub fn parse_full_single_state<T>(input: &[u8]) -> State<T>
 where
     T: InfoLine + std::fmt::Debug,
@@ -29,13 +38,17 @@ where
     state.try_into_frame().unwrap()
 }
 
-pub fn poll_first<T>(buf: &mut Cursor<'_>) -> State<T>
+#[allow(clippy::result_large_err)]
+pub fn poll_state<T>(input: &[u8]) -> Result<State<T>, HttpReadError<T>>
 where
     T: InfoLine + std::fmt::Debug,
     MessageHead<T>: ParseBodyHeaders,
 {
-    let state: State<T> = State::new();
-    state.try_next(Event::Read(buf)).unwrap()
+    let mut buf = BytesMut::from(input);
+    let mut cbuf = Cursor::new(&mut buf);
+    let mut state: State<T> = State::new();
+    state = state.try_next(Event::Read(&mut cbuf))?;
+    state.try_next(Event::End(&mut cbuf))
 }
 
 pub fn parse_full_multiple<T>(input: &[&[u8]]) -> OneOne<T>

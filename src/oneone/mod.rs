@@ -1,7 +1,7 @@
 use body_plz::variants::Body;
 use bytes::BytesMut;
 use header_plz::{
-    Header, HeaderMap, InfoLine,
+    Header, InfoLine,
     body_headers::{BodyHeader, parse::ParseBodyHeaders},
     const_headers::{CONNECTION, KEEP_ALIVE, PROXY_CONNECTION, TRAILER},
     error::HeaderReadError,
@@ -48,16 +48,8 @@ where
     }
 
     // Header Related methods
-    pub fn infoline_as_mut(&mut self) -> &mut T {
-        self.message_head.infoline_as_mut()
-    }
-
     pub fn message_head(&self) -> &MessageHead<T> {
         &self.message_head
-    }
-
-    pub fn header_map_as_mut(&mut self) -> &mut HeaderMap {
-        self.message_head.header_map_as_mut()
     }
 
     pub fn has_header_key(&self, key: &str) -> Option<usize> {
@@ -69,15 +61,51 @@ where
         self.message_head.header_map_as_mut().add_header(header);
     }
 
+    pub fn append_headers(&mut self, mut headers: Vec<Header>) {
+        self.message_head
+            .header_map_as_mut()
+            .headers_as_mut()
+            .append(&mut headers);
+    }
+
+    pub fn update_header_value_on_position(&mut self, pos: usize, value: &str) {
+        self.message_head
+            .header_map_as_mut()
+            .update_header_value_on_position(pos, value);
+    }
+
+    pub fn update_header_value_on_key(&mut self, key: &str, value: &str) -> bool {
+        self.message_head
+            .header_map_as_mut()
+            .update_header_value_on_key(key, value)
+    }
+
+    pub fn remove_header_on_position(&mut self, pos: usize) {
+        self.message_head
+            .header_map_as_mut()
+            .remove_header_on_position(pos);
+    }
+
+    pub fn remove_header_on_key(&mut self, key: &str) -> bool {
+        self.message_head
+            .header_map_as_mut()
+            .remove_header_on_key(key)
+    }
+
+    pub fn truncate_header_value_on_position<E>(&mut self, pos: usize, truncate_at: E)
+    where
+        E: AsRef<str>,
+    {
+        self.message_head
+            .header_map_as_mut()
+            .truncate_header_value_on_position(pos, truncate_at);
+    }
+
     pub fn has_trailers(&self) -> bool {
         self.message_head
             .header_map()
             .header_key_position(TRAILER)
             .is_some()
-    }
-
-    pub fn value_for_key(&self, key: &str) -> Option<&str> {
-        self.message_head.header_map().value_of_key(key)
     }
 
     // Body Headers Related
@@ -104,13 +132,6 @@ where
 
     pub fn body_as_mut(&mut self) -> Option<&mut Body> {
         self.body.as_mut()
-    }
-
-    pub fn content_length(&self) -> usize {
-        if let Some(Body::Raw(body)) = &self.body {
-            return body.len();
-        }
-        0
     }
 
     // checkers

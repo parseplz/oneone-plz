@@ -61,7 +61,7 @@ where
     {
         // if only chunked present do nothing
         if let Some(index) = is_only_te_chunked(einfo_list) {
-            one.header_map_as_mut().remove_header_on_position(index);
+            one.remove_header_on_position(index);
         } else {
             match decompress_body(one, body, extra_body.take(), einfo_list, buf) {
                 Ok((result_body, result_extra_body)) => {
@@ -72,15 +72,12 @@ where
                     let (body, e) = e.into_body_and_error();
                     match body_headers.as_ref().unwrap().chunked_te_position() {
                         // if chunked is only value
-                        Some((header_index, 0)) => one
-                            .header_map_as_mut()
-                            .remove_header_on_position(header_index),
+                        Some((header_index, 0)) => one.remove_header_on_position(header_index),
                         // has other values
                         Some((header_index, value_index)) => {
                             // if last in header truncate
                             if einfo_list[header_index].encodings().len() == value_index + 1 {
-                                one.header_map_as_mut()
-                                    .truncate_header_value_on_position(header_index, CHUNKED);
+                                one.truncate_header_value_on_position(header_index, CHUNKED);
                                 // else create new string and assign
                             } else {
                                 let value = einfo_list[header_index]
@@ -90,8 +87,7 @@ where
                                     .map(AsRef::as_ref)
                                     .collect::<Vec<_>>()
                                     .join(", ");
-                                one.header_map_as_mut()
-                                    .update_header_value_on_position(header_index, &value)
+                                one.update_header_value_on_position(header_index, &value)
                             }
                         }
                         _ => (),
@@ -162,7 +158,7 @@ pub fn is_only_te_chunked(einfo_list: &[EncodingInfo]) -> Option<usize> {
 
 #[cfg(test)]
 mod test {
-    use crate::{error::HttpReadError, state::State};
+    use crate::state::State;
     use buffer_plz::{Cursor, Event};
     use bytes::{BufMut, BytesMut};
     use header_plz::Response;
@@ -175,60 +171,6 @@ mod test {
     };
 
     use super::*;
-
-    #[test]
-    fn test_convert_no_cl() {
-        let res = "HTTP/1.1 200 OK\r\n\
-                   Host: reqbin.com\r\n\
-                   Content-Type: text/plain\r\n\r\n\
-                   MozillaDeveloperNetwork";
-        let verify = "HTTP/1.1 200 OK\r\n\
-                      Host: reqbin.com\r\n\
-                      Content-Type: text/plain\r\n\
-                      Content-Length: 23\r\n\r\n\
-                      MozillaDeveloperNetwork";
-
-        let mut buf: BytesMut = res.into();
-        let mut cbuf = Cursor::new(&mut buf);
-        let mut state: State<Response> = State::new();
-        let event = Event::Read(&mut cbuf);
-        state = state.try_next(event).unwrap();
-        let event = Event::End(&mut cbuf);
-        state = state.try_next(event).unwrap();
-        match state {
-            State::End(_) => {
-                let data = state.try_into_frame().unwrap().into_bytes();
-                assert_eq!(data, verify);
-            }
-            _ => {
-                panic!()
-            }
-        }
-    }
-
-    #[test]
-    fn test_convert_cl_partial() {
-        let res = "HTTP/1.1 200 OK\r\n\
-                   Host: reqbin.com\r\n\
-                   Content-Type: text/plain\r\n\
-                   Content-Length: 100\r\n\r\n\
-                   h";
-
-        let mut buf: BytesMut = res.into();
-        let mut cbuf = Cursor::new(&mut buf);
-        let mut state: State<Response> = State::new();
-        let event = Event::Read(&mut cbuf);
-        state = state.try_next(event).unwrap();
-        let event = Event::End(&mut cbuf);
-        let result = state.try_next(event);
-        if let Err(HttpReadError::ContentLengthPartial(oneone, buf)) = result {
-            let data = oneone.into_bytes();
-            assert_eq!(data, &res[..res.len() - 1]);
-            assert_eq!(buf, "h");
-        } else {
-            panic!()
-        }
-    }
 
     fn compressed_data() -> Vec<u8> {
         let data = b"hello world";

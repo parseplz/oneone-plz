@@ -51,13 +51,12 @@ where
         };
 
         if let Some(pos) = one.has_connection_keep_alive() {
-            one.header_map_as_mut()
-                .update_header_value_on_position(pos, CLOSE);
+            one.update_header_value_on_position(pos, CLOSE);
         }
         if let Some(pos) = one.has_proxy_connection() {
-            one.header_map_as_mut().remove_header_on_position(pos);
+            one.remove_header_on_position(pos);
         }
-        one.header_map_as_mut().remove_header_on_key(WS_EXT);
+        one.remove_header_on_key(WS_EXT);
         Ok(one)
     }
 }

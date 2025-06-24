@@ -102,8 +102,7 @@ where
                     let index = einfo.encodings().len() - index;
                     if index > 0 {
                         if let Some(encoding) = einfo.encodings().get(index) {
-                            one.header_map_as_mut()
-                                .truncate_header_value_on_position(einfo.header_index, encoding);
+                            one.truncate_header_value_on_position(einfo.header_index, encoding);
                         }
                     }
                     return Err(DEStruct::new(output, None, e));
@@ -112,8 +111,7 @@ where
         }
 
         // remove the header in index
-        one.header_map_as_mut()
-            .remove_header_on_position(einfo.header_index);
+        one.remove_header_on_position(einfo.header_index);
     }
     Ok(output)
 }

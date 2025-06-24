@@ -35,12 +35,10 @@ where
         // 2. If trailer is present,
         ChunkType::Trailers(trailer) => {
             // 2.a. Remove trailer header
-            one.header_map_as_mut().remove_header_on_key(TRAILER);
+            one.remove_header_on_key(TRAILER);
             // 2.b. Add trailer to header_map
-            let mut trailer_header = trailer.into_header_vec();
-            one.header_map_as_mut()
-                .headers_as_mut()
-                .append(&mut trailer_header);
+            let trailer_header = trailer.into_header_vec();
+            one.append_headers(trailer_header);
         }
         ChunkType::Extra(data) => new_body.extend_from_slice(&data),
         _ => {}

@@ -47,10 +47,7 @@ where
             let len = buf.len().to_string();
             // 4.a. set body
             one.set_body(Body::Raw(buf));
-            if !one
-                .header_map_as_mut()
-                .update_header_value_on_key(CONTENT_LENGTH, len.as_str())
-            {
+            if !one.update_header_value_on_key(CONTENT_LENGTH, len.as_str()) {
                 dbg!("Y");
                 one.add_header(CONTENT_LENGTH, &len);
             }
