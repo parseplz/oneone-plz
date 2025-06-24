@@ -5,7 +5,6 @@ pub mod content_length;
 pub mod chunked;
 pub mod decompress;
 use chunked::chunked_to_raw;
-use content_length::update_content_length;
 use decompress::error::DecompressError;
 use decompress::*;
 use header_plz::{
@@ -19,7 +18,7 @@ use header_plz::{
     message_head::MessageHead,
 };
 
-use crate::oneone::OneOne;
+use crate::{convert::content_length::add_body_and_update_cl, oneone::OneOne};
 
 /* Description:
  *      Convert raw h11 to decompressed/dechunked h11.
@@ -125,24 +124,6 @@ where
     // 4. Update Content-Length
     add_body_and_update_cl(one, body, body_headers);
     Ok(())
-}
-
-pub fn add_body_and_update_cl<T>(
-    one: &mut OneOne<T>,
-    body: BytesMut,
-    body_headers: Option<BodyHeader>,
-) where
-    T: InfoLine,
-    MessageHead<T>: ParseBodyHeaders,
-{
-    if !body.is_empty() {
-        update_content_length(one, body.len());
-    }
-
-    if let Some(bh) = body_headers {
-        one.body_headers_as_mut().replace(bh);
-    }
-    one.set_body(Body::Raw(body));
 }
 
 pub fn is_only_te_chunked(einfo_list: &[EncodingInfo]) -> Option<usize> {

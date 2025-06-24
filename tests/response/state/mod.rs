@@ -1,6 +1,6 @@
 use super::*;
 
-mod body_close;
 mod chunked;
+mod close;
 mod content_length;
 mod headers;

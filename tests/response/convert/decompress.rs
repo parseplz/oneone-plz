@@ -47,7 +47,7 @@ fn test_response_decompress_all_single() {
     )
     .into();
     input.extend_from_slice(&compressed[..]);
-    let result = parse_full_single::<Response>(&input);
+    let result = poll_oneone_only_read::<Response>(&input);
     let verify = "HTTP/1.1 200 OK\r\n\
                   Host: reqbin.com\r\n\
                   Content-Type: text/plain\r\n\
@@ -73,7 +73,7 @@ fn test_response_decompress_all_multiple() {
     )
     .into();
     input.extend_from_slice(&compressed[..]);
-    let result = parse_full_single::<Response>(&input);
+    let result = poll_oneone_only_read::<Response>(&input);
     let verify = "HTTP/1.1 200 OK\r\n\
                   Host: reqbin.com\r\n\
                   Content-Type: text/plain\r\n\

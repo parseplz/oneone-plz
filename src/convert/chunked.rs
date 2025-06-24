@@ -41,7 +41,7 @@ where
             one.append_headers(trailer_header);
         }
         ChunkType::Extra(data) => new_body.extend_from_slice(&data),
-        _ => {}
+        _ => (),
     });
     one.set_body(Body::Raw(new_body));
 }

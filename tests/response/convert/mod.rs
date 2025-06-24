@@ -15,18 +15,10 @@ fn test_response_convert_no_cl() {
                   Content-Length: 23\r\n\r\n\
                   MozillaDeveloperNetwork";
 
-    let mut buf: BytesMut = input.into();
-    let mut cbuf = Cursor::new(&mut buf);
-    let mut state = poll_first::<Response>(&mut cbuf);
-    let event = Event::End(&mut cbuf);
-    state = state.try_next(event).unwrap();
-    match state {
-        State::End(_) => {
-            let data = state.try_into_frame().unwrap().into_bytes();
-            assert_eq!(data, verify);
-        }
-        _ => {
-            panic!()
-        }
-    }
+    let result = poll_state_result_with_end::<Response>(input.as_bytes())
+        .unwrap()
+        .try_into_frame()
+        .unwrap()
+        .into_bytes();
+    assert_eq!(result, verify);
 }

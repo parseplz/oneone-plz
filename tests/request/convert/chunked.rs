@@ -20,7 +20,7 @@ fn test_request_convert_chunked_to_raw() {
                   Header: Val\r\n\
                   Content-Length: 23\r\n\r\n\
                   MozillaDeveloperNetwork";
-    let result = parse_full_single::<Request>(input.as_bytes());
+    let result = poll_oneone_only_read::<Request>(input.as_bytes());
     assert_eq!(result.into_bytes(), verify);
 }
 
@@ -44,6 +44,6 @@ fn test_request_convert_chunked_to_raw_extra_body() {
                   Header: Val\r\n\
                   Content-Length: 23\r\n\r\n\
                   MozillaDeveloperNetwork";
-    let result = parse_full_single::<Request>(input.as_bytes());
+    let result = poll_oneone_only_read::<Request>(input.as_bytes());
     assert_eq!(result.into_bytes(), verify);
 }

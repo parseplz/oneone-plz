@@ -7,7 +7,7 @@ fn test_response_state_message_head_single() {
     let input = "HTTP/1.1 200 OK\r\n\
                  Value: 10000\r\n\r\n";
 
-    let response = parse_full_single::<Response>(input.as_bytes());
+    let response = poll_oneone_only_read::<Response>(input.as_bytes());
     assert_eq!(response.status_code(), "200");
     let result = response.into_bytes();
     assert_eq!(result, input);
@@ -50,7 +50,7 @@ fn test_response_state_message_head_multiple_two() {
         b"Server: Apache\r\n",
         b"x-frame-options: DENY\r\n\r\n",
     ];
-    let result = parse_full_multiple::<Response>(chunks);
+    let result = poll_oneone_multiple::<Response>(chunks);
     assert_eq!(result.status_code(), "200");
     let verify = "\
         HTTP/1.1 200 OK\r\n\
@@ -65,7 +65,7 @@ fn test_response_state_switching_protocol() {
     let input = "HTTP/1.1 101 Switching Protocols\r\n\
                 Upgrade: websocket\r\n\
                 Connection: Upgrade\r\n\r\n";
-    let response = parse_full_single::<Response>(input.as_bytes());
+    let response = poll_oneone_only_read::<Response>(input.as_bytes());
     assert_eq!(response.status_code(), "101");
 }
 
@@ -73,7 +73,7 @@ fn test_response_state_switching_protocol() {
 fn test_response_state_not_modified() {
     let input = "HTTP/1.1 304 OK\r\n\
                  X-Test: test\r\n\r\n";
-    let response = parse_full_single::<Response>(input.as_bytes());
+    let response = poll_oneone_only_read::<Response>(input.as_bytes());
     assert_eq!(response.status_code(), "304");
 }
 
