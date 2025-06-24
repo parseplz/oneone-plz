@@ -151,30 +151,3 @@ fn decompress_zstd(
     let mut reader = zstd::stream::read::Decoder::new(data).map_err(DecompressError::Zstd)?;
     copy(&mut reader, writer).map_err(DecompressError::Zstd)
 }
-
-#[cfg(test)]
-mod tests {
-    use std::io::Write;
-
-    use bytes::{BufMut, BytesMut};
-
-    use crate::convert::decompress::decompress_brotli;
-
-    #[test]
-    fn test_brotli() {
-        let data = b"hello world";
-        let mut compressed = BytesMut::new();
-        let mut buf_writer = compressed.writer();
-        let mut br = brotli::CompressorWriter::new(&mut buf_writer, 4096, 11, 22);
-        let _ = br.write_all(&data[..]);
-        let _ = br.flush();
-        drop(br);
-        compressed = buf_writer.into_inner();
-        dbg!(&compressed.len());
-
-        let mut buf = BytesMut::new();
-        let mut buf_writer = (&mut buf).writer();
-        decompress_brotli(&compressed[..], &mut buf_writer).unwrap();
-        dbg!(&buf);
-    }
-}
