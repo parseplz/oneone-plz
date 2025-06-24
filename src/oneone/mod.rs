@@ -106,6 +106,14 @@ where
         self.body.as_mut()
     }
 
+    pub fn content_length(&self) -> usize {
+        if let Some(Body::Raw(body)) = &self.body {
+            return body.len();
+        }
+        0
+    }
+
+    // checkers
     pub fn has_connection_keep_alive(&self) -> Option<usize> {
         self.message_head
             .header_map()

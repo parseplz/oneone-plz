@@ -8,7 +8,7 @@ use oneone_plz::error::HttpReadError;
 use oneone_plz::{oneone::OneOne, state::State};
 use protocol_traits_plz::Step;
 
-pub fn parse_full_single<T>(input: &[u8]) -> OneOne<T>
+pub fn parse_full_single_state<T>(input: &[u8]) -> State<T>
 where
     T: InfoLine + std::fmt::Debug,
     MessageHead<T>: ParseBodyHeaders,
@@ -17,6 +17,15 @@ where
     let mut cbuf = Cursor::new(&mut buf);
     let state = poll_first(&mut cbuf);
     assert!(matches!(state, State::End(_)));
+    state
+}
+
+pub fn parse_full_single<T>(input: &[u8]) -> OneOne<T>
+where
+    T: InfoLine + std::fmt::Debug,
+    MessageHead<T>: ParseBodyHeaders,
+{
+    let state = parse_full_single_state(input);
     state.try_into_frame().unwrap()
 }
 
