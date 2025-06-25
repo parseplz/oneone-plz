@@ -1,0 +1,4 @@
+[test_config]
+skip-clean = true
+output-dir = "./target"
+out = ["Html"]
