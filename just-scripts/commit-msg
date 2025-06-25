@@ -1,0 +1,41 @@
+#!/bin/sh
+
+min_length=10
+max_length=1000
+types=("build" "chore" "ci" "docs" "feat" "fix" "perf" "refactor" "style" "test" "WIP")
+
+function build_regex() {
+  regexp="^("
+  for type in "${types[@]}"
+  do
+    regexp="${regexp}$type|"
+  done
+
+  # Remove trailing pipe `|`
+  regexp="${regexp%|}"
+
+  # Optional scope and optional breaking `!`
+  regexp="${regexp})(\(.+\))?(!)?: "
+
+  # Length restriction
+  regexp="${regexp}.{$min_length,$max_length}$"
+}
+
+function print_error() {
+  echo -e "\n\e[1m\e[31m[INVALID COMMIT MESSAGE]"
+  echo -e "------------------------\033[0m\e[0m"
+  echo -e "\e[1mValid types:\e[0m \e[34m${types[@]}\033[0m"
+  echo -e "\e[1mMax length (first line):\e[0m \e[34m$max_length\033[0m"
+  echo -e "\e[1mMin length (first line):\e[0m \e[34m$min_length\033[0m\n"
+}
+
+INPUT_FILE=.git/COMMIT_EDITMSG
+START_LINE=`head -n1 $INPUT_FILE`
+
+build_regex
+
+if [[ ! $START_LINE =~ $regexp ]]; then
+  # commit message is invalid according to config - block commit
+  print_error
+  exit 1
+fi
