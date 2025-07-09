@@ -10,7 +10,7 @@ fn test_response_state_chunked_partial() {
 
     let result = poll_state_result_with_end::<Response>(input.as_bytes());
     if let Err(e) = result {
-        matches!(e, HttpReadError::ChunkReaderPartial(_, _));
+        matches!(e, HttpStateError::ChunkReaderPartial(_, _));
         assert_eq!(BytesMut::from(input.as_bytes()), BytesMut::from(e));
     } else {
         panic!()

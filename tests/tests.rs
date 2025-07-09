@@ -5,7 +5,7 @@ mod response;
 use buffer_plz::{Cursor, Event};
 use bytes::BytesMut;
 use header_plz::{InfoLine, body_headers::parse::ParseBodyHeaders, message_head::MessageHead};
-use oneone_plz::error::HttpReadError;
+use oneone_plz::error::HttpStateError;
 use oneone_plz::{oneone::OneOne, state::State};
 use protocol_traits_plz::Step;
 
@@ -22,7 +22,7 @@ where
 }
 
 #[allow(clippy::result_large_err)]
-pub fn poll_state_result_with_end<T>(input: &[u8]) -> Result<State<T>, HttpReadError<T>>
+pub fn poll_state_result_with_end<T>(input: &[u8]) -> Result<State<T>, HttpStateError<T>>
 where
     T: InfoLine + std::fmt::Debug,
     MessageHead<T>: ParseBodyHeaders,

@@ -10,7 +10,7 @@ use thiserror::Error;
 use crate::{convert::content_length::update_content_length, oneone::OneOne};
 
 #[derive(Debug, Error)]
-pub enum HttpReadError<T>
+pub enum HttpStateError<T>
 where
     T: InfoLine,
 {
@@ -27,16 +27,16 @@ where
     ChunkReaderPartial(OneOne<T>, BytesMut),
 }
 
-impl<T> From<HttpReadError<T>> for BytesMut
+impl<T> From<HttpStateError<T>> for BytesMut
 where
     T: InfoLine,
     MessageHead<T>: ParseBodyHeaders,
 {
-    fn from(value: HttpReadError<T>) -> Self {
+    fn from(value: HttpStateError<T>) -> Self {
         match value {
-            HttpReadError::Unparsed(buf) => buf,
-            HttpReadError::ContentLengthPartial(oneone, buf)
-            | HttpReadError::ChunkReaderPartial(oneone, buf) => {
+            HttpStateError::Unparsed(buf) => buf,
+            HttpStateError::ContentLengthPartial(oneone, buf)
+            | HttpStateError::ChunkReaderPartial(oneone, buf) => {
                 let mut data = oneone.into_bytes();
                 data.unsplit(buf);
                 data
@@ -46,16 +46,16 @@ where
     }
 }
 
-impl<T> TryFrom<HttpReadError<T>> for OneOne<T>
+impl<T> TryFrom<HttpStateError<T>> for OneOne<T>
 where
     T: InfoLine,
     MessageHead<T>: ParseBodyHeaders,
 {
-    type Error = HttpReadError<T>;
+    type Error = HttpStateError<T>;
 
-    fn try_from(value: HttpReadError<T>) -> Result<Self, Self::Error> {
+    fn try_from(value: HttpStateError<T>) -> Result<Self, Self::Error> {
         match value {
-            HttpReadError::ContentLengthPartial(mut oneone, buf) => {
+            HttpStateError::ContentLengthPartial(mut oneone, buf) => {
                 let len = buf.len();
                 oneone.set_body(Body::Raw(buf));
                 update_content_length(&mut oneone, len);

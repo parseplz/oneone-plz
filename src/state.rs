@@ -13,7 +13,7 @@ use header_plz::{
 use protocol_traits_plz::Step;
 
 use crate::{
-    error::HttpReadError,
+    error::HttpStateError,
     oneone::{OneOne, impl_try_from_state::FrameError},
 };
 
@@ -61,7 +61,7 @@ where
      */
 
     #[allow(clippy::result_large_err)]
-    fn build_oneone(headers: BytesMut) -> Result<Self, HttpReadError<T>> {
+    fn build_oneone(headers: BytesMut) -> Result<Self, HttpStateError<T>> {
         let mut one = OneOne::try_from_message_head_buf(headers)?;
         let next_state = match one.body_headers() {
             None => Self::End(one),
@@ -92,7 +92,7 @@ where
     T: InfoLine,
     MessageHead<T>: ParseBodyHeaders,
 {
-    type StateError = HttpReadError<T>;
+    type StateError = HttpStateError<T>;
     type FrameError = FrameError;
 
     fn try_next(mut self, event: Event) -> Result<Self, Self::StateError> {
@@ -109,7 +109,7 @@ where
                 false => Ok(Self::ReadMessageHead),
             },
             (State::ReadMessageHead, Event::End(buf)) => {
-                Err(HttpReadError::Unparsed(buf.into_inner()))?
+                Err(HttpStateError::Unparsed(buf.into_inner()))?
             }
             (State::ReadBodyContentLength(mut oneone, mut size), mut event) => match event {
                 Event::Read(ref mut buf) | Event::End(ref mut buf) => {
@@ -128,7 +128,7 @@ where
                         }
                         false => match event {
                             Event::Read(_) => Ok(State::ReadBodyContentLength(oneone, size)),
-                            Event::End(buf) => Err(HttpReadError::ContentLengthPartial(
+                            Event::End(buf) => Err(HttpStateError::ContentLengthPartial(
                                 oneone,
                                 buf.split_at_current_pos(),
                             ))?,
@@ -173,7 +173,7 @@ where
                 }
             },
             (State::ReadBodyChunked(oneone, _), Event::End(buf)) => {
-                Err(HttpReadError::ChunkReaderPartial(oneone, buf.into_inner()))
+                Err(HttpStateError::ChunkReaderPartial(oneone, buf.into_inner()))
             }
             (State::ReadBodyChunkedExtra(oneone), Event::Read(_)) => {
                 Ok(State::ReadBodyChunkedExtra(oneone))

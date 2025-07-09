@@ -4,7 +4,7 @@ use super::*;
 fn test_request_state_partial_info_line_only() {
     let input = "GET /echo HTTP/1.1\r\n";
     let result = poll_state_result_with_end::<Request>(input.as_bytes());
-    assert!(matches!(result, Err(HttpReadError::Unparsed(_))));
+    assert!(matches!(result, Err(HttpStateError::Unparsed(_))));
 }
 
 #[test]
