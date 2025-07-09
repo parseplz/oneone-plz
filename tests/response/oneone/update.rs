@@ -1,5 +1,5 @@
 use super::*;
-use oneone_plz::oneone::update::BuildHttp;
+use oneone_plz::oneone::build::BuildHttp;
 
 #[test]
 fn response_update() {

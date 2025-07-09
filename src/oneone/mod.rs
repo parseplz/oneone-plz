@@ -13,9 +13,9 @@ pub mod impl_try_from_state;
 
 use crate::convert::chunked::partial_chunked_to_raw;
 
+pub mod build;
 mod request;
 mod response;
-pub mod update;
 
 #[cfg_attr(any(test, debug_assertions), derive(Debug, PartialEq, Eq))]
 pub struct OneOne<T>

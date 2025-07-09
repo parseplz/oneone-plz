@@ -5,7 +5,7 @@ use header_plz::{
     const_headers::CONTENT_LENGTH, message_head::MessageHead,
 };
 
-use crate::oneone::{OneOne, update::error::UpdateFrameError};
+use crate::oneone::{OneOne, build::error::UpdateFrameError};
 
 /* Description:
  *      Update oneone from BytesMut.
