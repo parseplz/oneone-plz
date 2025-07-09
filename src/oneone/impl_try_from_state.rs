@@ -45,7 +45,7 @@ where
         let mut one = match result {
             Ok(one) => one,
             Err((one, e)) => {
-                eprintln!("{}", e);
+                eprintln!("{e}");
                 one
             }
         };
