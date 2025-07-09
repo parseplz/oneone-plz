@@ -9,7 +9,7 @@ use thiserror::Error;
 use crate::{convert::convert_body, oneone::OneOne, state::State};
 
 #[derive(Debug, Error)]
-pub enum FrameError {
+pub enum MessageFramingError {
     #[error("incorrect state| {0}")]
     IncorrectState(String),
 }
@@ -19,7 +19,7 @@ where
     T: InfoLine,
     MessageHead<T>: ParseBodyHeaders,
 {
-    type Error = FrameError;
+    type Error = MessageFramingError;
 
     fn try_from((state, buf): (State<T>, &mut BytesMut)) -> Result<Self, Self::Error> {
         let result = match state {
@@ -40,7 +40,7 @@ where
                     Err(e) => Err((one, e)),
                 }
             }
-            _ => return Err(FrameError::IncorrectState(state.to_string())),
+            _ => return Err(MessageFramingError::IncorrectState(state.to_string())),
         };
         let mut one = match result {
             Ok(one) => one,

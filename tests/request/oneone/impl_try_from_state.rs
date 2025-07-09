@@ -1,5 +1,5 @@
 use body_plz::reader::chunked_reader::ChunkReaderState;
-use oneone_plz::oneone::impl_try_from_state::FrameError;
+use oneone_plz::oneone::impl_try_from_state::MessageFramingError;
 
 use super::*;
 
@@ -10,7 +10,7 @@ fn test_request_try_from_state_incorrect_state() {
     let state: State<Request> = State::ReadMessageHead;
     assert!(matches!(
         state.try_into_frame(),
-        Err(FrameError::IncorrectState(_))
+        Err(MessageFramingError::IncorrectState(_))
     ));
 
     //
@@ -18,7 +18,7 @@ fn test_request_try_from_state_incorrect_state() {
     let state: State<Request> = State::ReadBodyContentLength(request, 10);
     assert!(matches!(
         state.try_into_frame(),
-        Err(FrameError::IncorrectState(_))
+        Err(MessageFramingError::IncorrectState(_))
     ));
 
     //
@@ -26,7 +26,7 @@ fn test_request_try_from_state_incorrect_state() {
     let state: State<Request> = State::ReadBodyContentLengthExtra(request);
     assert!(matches!(
         state.try_into_frame(),
-        Err(FrameError::IncorrectState(_))
+        Err(MessageFramingError::IncorrectState(_))
     ));
 
     //
@@ -34,7 +34,7 @@ fn test_request_try_from_state_incorrect_state() {
     let state: State<Request> = State::ReadBodyChunked(request, ChunkReaderState::ReadSize);
     assert!(matches!(
         state.try_into_frame(),
-        Err(FrameError::IncorrectState(_))
+        Err(MessageFramingError::IncorrectState(_))
     ));
 
     //
@@ -42,7 +42,7 @@ fn test_request_try_from_state_incorrect_state() {
     let state: State<Request> = State::ReadBodyChunkedExtra(request);
     assert!(matches!(
         state.try_into_frame(),
-        Err(FrameError::IncorrectState(_))
+        Err(MessageFramingError::IncorrectState(_))
     ));
 
     //
@@ -50,7 +50,7 @@ fn test_request_try_from_state_incorrect_state() {
     let state: State<Request> = State::ReadBodyClose(request);
     assert!(matches!(
         state.try_into_frame(),
-        Err(FrameError::IncorrectState(_))
+        Err(MessageFramingError::IncorrectState(_))
     ));
 }
 

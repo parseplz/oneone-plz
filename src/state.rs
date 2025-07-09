@@ -14,7 +14,7 @@ use protocol_traits_plz::Step;
 
 use crate::{
     error::HttpStateError,
-    oneone::{OneOne, impl_try_from_state::FrameError},
+    oneone::{OneOne, impl_try_from_state::MessageFramingError},
 };
 
 #[cfg_attr(test, derive(PartialEq, Eq))]
@@ -93,7 +93,7 @@ where
     MessageHead<T>: ParseBodyHeaders,
 {
     type StateError = HttpStateError<T>;
-    type FrameError = FrameError;
+    type FrameError = MessageFramingError;
 
     fn try_next(mut self, event: Event) -> Result<Self, Self::StateError> {
         match (self, event) {
@@ -209,7 +209,7 @@ where
             | matches!(self, State::ReadBodyChunkedExtraEnd(..))
     }
 
-    fn try_into_frame(self) -> Result<OneOne<T>, FrameError> {
+    fn try_into_frame(self) -> Result<OneOne<T>, MessageFramingError> {
         let mut buf = BytesMut::with_capacity(65535);
         OneOne::<T>::try_from((self, &mut buf))
     }
