@@ -1,4 +1,4 @@
-use std::io::{Write, copy};
+use std::io::copy;
 
 use bytes::{BufMut, BytesMut, buf::Writer};
 use header_plz::{
