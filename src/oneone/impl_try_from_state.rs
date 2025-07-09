@@ -6,11 +6,7 @@ use header_plz::{
 };
 use thiserror::Error;
 
-use crate::{
-    convert::convert_body,
-    oneone::OneOne,
-    state::State,
-};
+use crate::{convert::convert_body, oneone::OneOne, state::State};
 
 #[derive(Debug, Error)]
 pub enum MessageFramingError {
