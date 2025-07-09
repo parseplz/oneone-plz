@@ -5,7 +5,7 @@ use header_plz::{
     const_headers::CONTENT_LENGTH, message_head::MessageHead,
 };
 
-use crate::oneone::{OneOne, build::error::UpdateFrameError};
+use crate::oneone::{OneOne, build::error::BuildFrameError};
 
 /* Description:
  *      Build oneone from BytesMut.
@@ -23,8 +23,8 @@ use crate::oneone::{OneOne, build::error::UpdateFrameError};
  *          c. Else add, new content-length header.
  *
  * Error:
- *      UpdateFrameError::UnableToFindCRLF  [1]
- *      UpdateFrameError::HttpDecodeError   [3]
+ *      BuildFrameError::UnableToFindCRLF  [1]
+ *      BuildFrameError::HttpDecodeError   [3]
  */
 
 impl<T> TryFrom<BytesMut> for OneOne<T>
@@ -32,13 +32,13 @@ where
     T: InfoLine,
     MessageHead<T>: ParseBodyHeaders,
 {
-    type Error = UpdateFrameError;
+    type Error = BuildFrameError;
 
     fn try_from(mut buf: BytesMut) -> Result<Self, Self::Error> {
         let index = buf
             .windows(4)
             .position(|window| window == HEADER_DELIMITER)
-            .ok_or(UpdateFrameError::UnableToFindCRLF)?;
+            .ok_or(BuildFrameError::UnableToFindCRLF)?;
         let message_head = buf.split_to(index + HEADER_DELIMITER.len());
         let mut one: OneOne<T> = OneOne::try_from_message_head_buf(message_head)?;
         if !buf.is_empty() {

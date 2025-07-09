@@ -13,7 +13,7 @@ use super::*;
  */
 
 impl BuildFrame for OneOne<Request> {
-    fn build(buf: BytesMut) -> Result<Self, UpdateFrameError> {
+    fn build(buf: BytesMut) -> Result<Self, BuildFrameError> {
         let mut req = OneOne::<Request>::try_from(buf)?;
         if METHODS_WITH_BODY.contains(&req.method_as_enum()) {
             // If No content length header is present

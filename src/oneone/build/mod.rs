@@ -8,7 +8,7 @@ mod request;
 mod response;
 
 pub trait BuildFrame {
-    fn build(buf: BytesMut) -> Result<Self, UpdateFrameError>
+    fn build(buf: BytesMut) -> Result<Self, BuildFrameError>
     where
         Self: Sized;
 }
