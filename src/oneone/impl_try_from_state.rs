@@ -6,7 +6,11 @@ use header_plz::{
 };
 use thiserror::Error;
 
-use crate::{convert::convert_body, oneone::OneOne, state::State};
+use crate::{
+    convert::convert_body,
+    oneone::OneOne,
+    state::State,
+};
 
 #[derive(Debug, Error)]
 pub enum MessageFramingError {
@@ -42,6 +46,7 @@ where
             }
             _ => return Err(MessageFramingError::IncorrectState(state.to_string())),
         };
+
         let mut one = match result {
             Ok(one) => one,
             Err((one, e)) => {
