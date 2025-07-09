@@ -2,7 +2,7 @@ use header_plz::Response;
 
 use super::*;
 
-impl BuildHttp for OneOne<Response> {
+impl BuildFrame for OneOne<Response> {
     fn build(buf: BytesMut) -> Result<Self, UpdateFrameError> {
         OneOne::<Response>::try_from(buf)
     }

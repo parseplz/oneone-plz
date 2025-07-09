@@ -12,7 +12,7 @@ use super::*;
  *      Adding "Content-Length: 0" is not mandatory.
  */
 
-impl BuildHttp for OneOne<Request> {
+impl BuildFrame for OneOne<Request> {
     fn build(buf: BytesMut) -> Result<Self, UpdateFrameError> {
         let mut req = OneOne::<Request>::try_from(buf)?;
         if METHODS_WITH_BODY.contains(&req.method_as_enum()) {
