@@ -1,4 +1,4 @@
-use std::io::copy;
+use std::io::{Write, copy};
 
 use bytes::{BufMut, BytesMut, buf::Writer};
 use header_plz::{
@@ -78,7 +78,7 @@ where
     MessageHead<T>: ParseBodyHeaders,
 {
     let mut input: &[u8] = compressed;
-    let mut output = writer.get_mut().split();
+    let mut output: BytesMut = writer.get_mut().split();
 
     for einfo in encoding_info.iter().rev() {
         for (index, encoding) in einfo.encodings().iter().rev().enumerate() {
@@ -91,13 +91,15 @@ where
                 ContentEncoding::Unknown(e) => Err(DecompressError::Unknown(e.to_string())),
             };
 
-            output = writer.get_mut().split();
             match result {
                 Ok(_) => {
+                    output = writer.get_mut().split();
                     input = &output[..];
                 }
                 Err(e) => {
-                    dbg!(&e);
+                    writer.get_mut().clear();
+                    copy(&mut input, writer).unwrap();
+                    output = writer.get_mut().split();
                     // truncate till compression in header
                     let index = einfo.encodings().len() - index;
                     if index > 0 {
