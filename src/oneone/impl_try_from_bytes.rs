@@ -5,7 +5,7 @@ use header_plz::{
     const_headers::CONTENT_LENGTH, message_head::MessageHead,
 };
 
-use crate::oneone::{OneOne, build::error::BuildFrameError};
+use crate::oneone::{OneOne, build::error::BuildMessageError};
 
 /* Description:
  *      Build oneone from BytesMut.
@@ -32,13 +32,13 @@ where
     T: InfoLine,
     MessageHead<T>: ParseBodyHeaders,
 {
-    type Error = BuildFrameError;
+    type Error = BuildMessageError;
 
     fn try_from(mut buf: BytesMut) -> Result<Self, Self::Error> {
         let index = buf
             .windows(4)
             .position(|window| window == HEADER_DELIMITER)
-            .ok_or(BuildFrameError::UnableToFindCRLF)?;
+            .ok_or(BuildMessageError::UnableToFindCRLF)?;
         let message_head = buf.split_to(index + HEADER_DELIMITER.len());
         let mut one: OneOne<T> = OneOne::try_from_message_head_buf(message_head)?;
         if !buf.is_empty() {
