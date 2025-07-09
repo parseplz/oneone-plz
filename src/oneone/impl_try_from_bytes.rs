@@ -8,7 +8,7 @@ use header_plz::{
 use crate::oneone::{OneOne, build::error::UpdateFrameError};
 
 /* Description:
- *      Update oneone from BytesMut.
+ *      Build oneone from BytesMut.
  *      Used when request/response is modified in interceptor. No chunked body,
  *      as chunked is converted to Content-Length by convert_one_dot_one()
  *
@@ -18,9 +18,9 @@ use crate::oneone::{OneOne, build::error::UpdateFrameError};
  *      3. Build OneOne.
  *      4. if buf !empty, i.e. body is present.
  *          a. set body.
- *          b. If CL header is present, update Content-Length by calling
- *         update_content_length()
- *          c. Else add, new CL header.
+ *          b. If content-length header is present, update content-length by calling
+ *          update_content_length().
+ *          c. Else add, new content-length header.
  *
  * Error:
  *      UpdateFrameError::UnableToFindCRLF  [1]
@@ -35,20 +35,16 @@ where
     type Error = UpdateFrameError;
 
     fn try_from(mut buf: BytesMut) -> Result<Self, Self::Error> {
-        // 1. Find HEADER_DELIMITER (2 * CRLF) in buf.
         let index = buf
             .windows(4)
             .position(|window| window == HEADER_DELIMITER)
             .ok_or(UpdateFrameError::UnableToFindCRLF)?;
         let message_head = buf.split_to(index + HEADER_DELIMITER.len());
         let mut one: OneOne<T> = OneOne::try_from_message_head_buf(message_head)?;
-        // 4. Body is present
         if !buf.is_empty() {
             let len = buf.len().to_string();
-            // 4.a. set body
             one.set_body(Body::Raw(buf));
             if !one.update_header_value_on_key(CONTENT_LENGTH, len.as_str()) {
-                dbg!("Y");
                 one.add_header(CONTENT_LENGTH, &len);
             }
         }
