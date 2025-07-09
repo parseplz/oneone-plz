@@ -7,8 +7,8 @@ use error::*;
 mod request;
 mod response;
 
-pub trait UpdateHttp {
-    fn update(buf: BytesMut) -> Result<Self, UpdateFrameError>
+pub trait BuildHttp {
+    fn build(buf: BytesMut) -> Result<Self, UpdateFrameError>
     where
         Self: Sized;
 }

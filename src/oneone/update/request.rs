@@ -12,8 +12,8 @@ use super::*;
  *      Adding "Content-Length: 0" is not mandatory.
  */
 
-impl UpdateHttp for OneOne<Request> {
-    fn update(buf: BytesMut) -> Result<Self, UpdateFrameError> {
+impl BuildHttp for OneOne<Request> {
+    fn build(buf: BytesMut) -> Result<Self, UpdateFrameError> {
         let mut req = OneOne::<Request>::try_from(buf)?;
         if METHODS_WITH_BODY.contains(&req.method_as_enum()) {
             // If No content length header is present

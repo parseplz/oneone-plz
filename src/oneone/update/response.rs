@@ -2,8 +2,8 @@ use header_plz::Response;
 
 use super::*;
 
-impl UpdateHttp for OneOne<Response> {
-    fn update(buf: BytesMut) -> Result<Self, UpdateFrameError> {
+impl BuildHttp for OneOne<Response> {
+    fn build(buf: BytesMut) -> Result<Self, UpdateFrameError> {
         OneOne::<Response>::try_from(buf)
     }
 }
