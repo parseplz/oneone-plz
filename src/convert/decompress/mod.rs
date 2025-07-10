@@ -86,9 +86,12 @@ where
                 ContentEncoding::Brotli => decompress_brotli(input, writer),
                 ContentEncoding::Gzip => decompress_gzip(input, writer),
                 ContentEncoding::Deflate => decompress_deflate(input, writer),
-                ContentEncoding::Identity | ContentEncoding::Chunked => continue,
+                ContentEncoding::Identity => {
+                    copy(&mut input, writer).map_err(DecompressError::Identity)
+                }
                 ContentEncoding::Zstd | ContentEncoding::Compress => decompress_zstd(input, writer),
                 ContentEncoding::Unknown(e) => Err(DecompressError::Unknown(e.to_string())),
+                ContentEncoding::Chunked => panic!(),
             };
 
             match result {

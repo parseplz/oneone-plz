@@ -1,7 +1,7 @@
 use super::*;
 
 #[test]
-fn test_response_state_content_length_brotli() {
+fn test_response_state_content_length_decompress_brotli() {
     let input = b"HTTP/1.1 200 OK\r\n\
                 Content-Length: 15\r\n\
                 Content-Encoding: br\r\n\r\n\
@@ -15,7 +15,7 @@ fn test_response_state_content_length_brotli() {
 }
 
 #[test]
-fn test_response_state_content_length_gzip() {
+fn test_response_state_content_length_decompress_gzip() {
     let input = b"HTTP/1.1 200 OK\r\n\
                 Content-Length: 41\r\n\
                 Content-Encoding: gzip\r\n\r\n\
@@ -30,7 +30,7 @@ fn test_response_state_content_length_gzip() {
 }
 
 #[test]
-fn test_response_content_length_deflate() {
+fn test_response_content_length_decompress_deflate() {
     let input = b"HTTP/1.1 200 OK\r\n\
                 Content-Length: 29\r\n\
                 Content-Encoding: deflate\r\n\r\n\
@@ -44,7 +44,7 @@ fn test_response_content_length_deflate() {
 }
 
 #[test]
-fn test_response_state_content_length_zstd() {
+fn test_response_state_content_length_decompress_zstd() {
     let input = b"HTTP/1.1 200 OK\r\n\
                 Content-Length: 24\r\n\
                 Content-Encoding: zstd\r\n\r\n\
@@ -58,7 +58,20 @@ fn test_response_state_content_length_zstd() {
 }
 
 #[test]
-fn test_response_decompress_all_single() {
+fn test_response_state_content_length_decompress_identity() {
+    let input = b"HTTP/1.1 200 OK\r\n\
+                Content-Encoding: identity\r\n\
+                Content-Length: 11\r\n\r\n\
+                hello world";
+    let response = poll_oneone_only_read::<Response>(input);
+    let verify = "HTTP/1.1 200 OK\r\n\
+                  Content-Length: 11\r\n\r\n\
+                  hello world";
+    assert_eq!(response.into_bytes(), verify);
+}
+
+#[test]
+fn test_response_state_content_length_decompress_all_single() {
     let compressed = compressed_data();
     let mut input: Vec<u8> = format!(
         "HTTP/1.1 200 OK\r\n\
@@ -81,7 +94,7 @@ fn test_response_decompress_all_single() {
 }
 
 #[test]
-fn test_response_decompress_all_multiple() {
+fn test_response_state_content_length_decompress_all_multiple() {
     let compressed = compressed_data();
     let mut input: Vec<u8> = format!(
         "HTTP/1.1 200 OK\r\n\

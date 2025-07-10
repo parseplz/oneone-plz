@@ -13,6 +13,8 @@ pub enum DecompressError {
     Gzip(Error),
     #[error("zstd| {0}")]
     Zstd(Error),
+    #[error("identity| {0}")]
+    Identity(Error),
     #[error("unknown| {0}")]
     Unknown(String),
 }
@@ -25,16 +27,16 @@ pub struct DecompressErrorStruct {
 }
 
 impl DecompressErrorStruct {
-    pub fn is_unknown_encoding(&self) -> bool {
-        matches!(self.error, DecompressError::Unknown(_))
-    }
-
     pub fn new(body: BytesMut, extra_body: Option<BytesMut>, error: DecompressError) -> Self {
         DecompressErrorStruct {
             body,
             extra_body,
             error,
         }
+    }
+
+    pub fn is_unknown_encoding(&self) -> bool {
+        matches!(self.error, DecompressError::Unknown(_))
     }
 
     pub fn into_body_and_error(mut self) -> (BytesMut, DecompressError) {
