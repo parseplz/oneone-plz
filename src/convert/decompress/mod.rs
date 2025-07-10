@@ -80,18 +80,18 @@ where
     let mut input: &[u8] = compressed;
     let mut output: BytesMut = writer.get_mut().split();
 
-    for einfo in encoding_info.iter().rev() {
-        for (index, encoding) in einfo.encodings().iter().rev().enumerate() {
+    for encoding_info in encoding_info.iter().rev() {
+        for (index, encoding) in encoding_info.encodings().iter().rev().enumerate() {
             let result = match encoding {
                 ContentEncoding::Brotli => decompress_brotli(input, writer),
-                ContentEncoding::Gzip => decompress_gzip(input, writer),
+                ContentEncoding::Chunked => continue,
                 ContentEncoding::Deflate => decompress_deflate(input, writer),
+                ContentEncoding::Gzip => decompress_gzip(input, writer),
                 ContentEncoding::Identity => {
                     copy(&mut input, writer).map_err(DecompressError::Identity)
                 }
                 ContentEncoding::Zstd | ContentEncoding::Compress => decompress_zstd(input, writer),
                 ContentEncoding::Unknown(e) => Err(DecompressError::Unknown(e.to_string())),
-                ContentEncoding::Chunked => panic!(),
             };
 
             match result {
@@ -104,10 +104,13 @@ where
                     copy(&mut input, writer).unwrap();
                     output = writer.get_mut().split();
                     // truncate till compression in header
-                    let index = einfo.encodings().len() - index;
+                    let index = encoding_info.encodings().len() - index;
                     if index > 0 {
-                        if let Some(encoding) = einfo.encodings().get(index) {
-                            one.truncate_header_value_on_position(einfo.header_index, encoding);
+                        if let Some(encoding) = encoding_info.encodings().get(index) {
+                            one.truncate_header_value_on_position(
+                                encoding_info.header_index,
+                                encoding,
+                            );
                         }
                     }
                     return Err(DecompressErrorStruct::new(output, None, e));
@@ -116,7 +119,7 @@ where
         }
 
         // remove the header in index
-        one.remove_header_on_position(einfo.header_index);
+        one.remove_header_on_position(encoding_info.header_index);
     }
     Ok(output)
 }
