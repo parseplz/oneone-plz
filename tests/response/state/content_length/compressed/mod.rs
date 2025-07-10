@@ -4,12 +4,13 @@ use std::io::{Read, Write};
 mod transfer_encoding;
 
 use flate2::{
-    Compression,
     read::{DeflateEncoder, GzEncoder},
+    Compression,
 };
 
 use super::*;
 mod basic;
+mod error;
 
 fn compressed_data() -> Vec<u8> {
     let data = b"hello world";
