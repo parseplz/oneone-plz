@@ -27,12 +27,14 @@ where
     buf.reserve(capacity);
     let mut buf_writer = buf.writer();
 
-    // 1. concat extra and try
     if let Some(extra) = extra_body {
+        // 1. concat extra and try => single compression
         let main_org_len = main_body.len();
         main_body.unsplit(extra);
         match decompress(one, &main_body[..], &mut buf_writer, encodings) {
-            Ok(out) => return Ok((out, None)),
+            Ok(out) => {
+                return Ok((out, None));
+            }
             Err(e) => {
                 if e.is_unknown_encoding() {
                     return Err(e);
@@ -129,6 +131,7 @@ fn decompress_brotli(
     data: &[u8],
     writer: &mut Writer<&mut BytesMut>,
 ) -> Result<u64, DecompressError> {
+    dbg!(String::from_utf8_lossy(data));
     let mut reader = brotli::Decompressor::new(data, data.len());
     copy(&mut reader, writer).map_err(DecompressError::Brotli)
 }

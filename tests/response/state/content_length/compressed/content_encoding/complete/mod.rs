@@ -2,7 +2,7 @@ use super::*;
 mod error;
 
 #[test]
-fn test_response_state_cl_decompress_ce_brotli() {
+fn test_response_state_cl_decompress_ce_complete_brotli() {
     let input = b"HTTP/1.1 200 OK\r\n\
                 Content-Length: 15\r\n\
                 Content-Encoding: br\r\n\r\n\
@@ -16,7 +16,7 @@ fn test_response_state_cl_decompress_ce_brotli() {
 }
 
 #[test]
-fn test_response_state_cl_decompress_ce_gzip() {
+fn test_response_state_cl_decompress_ce_complete_gzip() {
     let input = b"HTTP/1.1 200 OK\r\n\
                 Content-Length: 41\r\n\
                 Content-Encoding: gzip\r\n\r\n\
@@ -31,7 +31,7 @@ fn test_response_state_cl_decompress_ce_gzip() {
 }
 
 #[test]
-fn test_response_cl_decompress_ce_deflate() {
+fn test_response_cl_decompress_ce_complete_deflate() {
     let input = b"HTTP/1.1 200 OK\r\n\
                 Content-Length: 29\r\n\
                 Content-Encoding: deflate\r\n\r\n\
@@ -45,7 +45,7 @@ fn test_response_cl_decompress_ce_deflate() {
 }
 
 #[test]
-fn test_response_state_cl_decompress_ce_zstd() {
+fn test_response_state_cl_decompress_ce_complete_zstd() {
     let input = b"HTTP/1.1 200 OK\r\n\
                 Content-Length: 24\r\n\
                 Content-Encoding: zstd\r\n\r\n\
@@ -59,7 +59,7 @@ fn test_response_state_cl_decompress_ce_zstd() {
 }
 
 #[test]
-fn test_response_state_cl_decompress_ce_identity() {
+fn test_response_state_cl_decompress_ce_complete_identity() {
     let input = b"HTTP/1.1 200 OK\r\n\
                 Content-Encoding: identity\r\n\
                 Content-Length: 11\r\n\r\n\
@@ -72,7 +72,7 @@ fn test_response_state_cl_decompress_ce_identity() {
 }
 
 #[test]
-fn test_response_state_cl_decompress_ce_all_single() {
+fn test_response_state_cl_decompress_ce_complete_all_single() {
     let compressed = compressed_data();
     let mut input: Vec<u8> = format!(
         "HTTP/1.1 200 OK\r\n\
@@ -95,7 +95,7 @@ fn test_response_state_cl_decompress_ce_all_single() {
 }
 
 #[test]
-fn test_response_state_cl_decompress_ce_all_multiple() {
+fn test_response_state_cl_decompress_ce_complete_all_multiple() {
     let compressed = compressed_data();
     let mut input: Vec<u8> = format!(
         "HTTP/1.1 200 OK\r\n\

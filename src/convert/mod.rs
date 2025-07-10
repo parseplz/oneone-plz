@@ -106,6 +106,8 @@ where
     {
         match decompress_body(one, body, extra_body.take(), einfo_list, buf) {
             Ok((result_body, result_extra_body)) => {
+                dbg!(&result_body);
+                dbg!(&result_extra_body);
                 body = result_body;
                 extra_body = result_extra_body;
             }
