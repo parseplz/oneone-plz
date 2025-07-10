@@ -1,12 +1,8 @@
 use super::*;
 use bytes::BufMut;
+use flate2::Compression;
 use std::io::{Read, Write};
 mod transfer_encoding;
-
-use flate2::{
-    Compression,
-    read::{DeflateEncoder, GzEncoder},
-};
 
 use super::*;
 mod basic;
@@ -25,12 +21,12 @@ fn compressed_data() -> Vec<u8> {
     compressed = buf_writer.into_inner();
 
     // deflate
-    let mut deflater = DeflateEncoder::new(&compressed[..], Compression::fast());
+    let mut deflater = flate2::read::ZlibEncoder::new(&compressed[..], Compression::fast());
     let mut compressed = Vec::new();
     deflater.read_to_end(&mut compressed).unwrap();
 
     // gzip
-    let mut gz = GzEncoder::new(&compressed[..], Compression::fast());
+    let mut gz = flate2::read::GzEncoder::new(&compressed[..], Compression::fast());
     let mut compressed = Vec::new();
     gz.read_to_end(&mut compressed).unwrap();
 

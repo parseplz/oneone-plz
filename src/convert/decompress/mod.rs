@@ -132,7 +132,7 @@ fn decompress_deflate(
     data: &[u8],
     writer: &mut Writer<&mut BytesMut>,
 ) -> Result<u64, DecompressError> {
-    let mut reader = flate2::bufread::DeflateDecoder::new(data);
+    let mut reader = flate2::bufread::ZlibDecoder::new(data);
     copy(&mut reader, writer).map_err(DecompressError::Deflate)
 }
 

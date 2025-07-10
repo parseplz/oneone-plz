@@ -30,6 +30,20 @@ fn test_response_state_content_length_gzip() {
 }
 
 #[test]
+fn test_response_content_length_deflate() {
+    let input = b"HTTP/1.1 200 OK\r\n\
+                Content-Length: 29\r\n\
+                Content-Encoding: deflate\r\n\r\n\
+                \x78\x9c\x05\x80\x41\x09\x00\x00\x08\xc4\xaa\x18\x4e\xc1\xc7\
+                \xe0\xc0\x8f\xf5\xc7\x0e\xa4\x3e\x47\x0b\x1a\x0b\x04\x5d";
+    let result = poll_oneone_only_read::<Response>(input);
+    let verify = "HTTP/1.1 200 OK\r\n\
+                  Content-Length: 11\r\n\r\n\
+                  hello world";
+    assert_eq!(result.into_bytes(), verify);
+}
+
+#[test]
 fn test_response_state_content_length_zstd() {
     let input = b"HTTP/1.1 200 OK\r\n\
                 Content-Length: 24\r\n\
