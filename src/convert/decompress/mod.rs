@@ -8,7 +8,7 @@ use header_plz::{
     message_head::{MessageHead, info_line::InfoLine},
 };
 pub mod error;
-use crate::{convert::decompress::error::DEStruct, oneone::OneOne};
+use crate::{convert::decompress::error::DecompressErrorStruct, oneone::OneOne};
 use error::DecompressError;
 
 pub fn decompress_body<T>(
@@ -17,7 +17,7 @@ pub fn decompress_body<T>(
     extra_body: Option<BytesMut>,
     encodings: &[EncodingInfo],
     buf: &mut BytesMut,
-) -> Result<(BytesMut, Option<BytesMut>), DEStruct>
+) -> Result<(BytesMut, Option<BytesMut>), DecompressErrorStruct>
 where
     T: InfoLine,
     MessageHead<T>: ParseBodyHeaders,
@@ -72,7 +72,7 @@ pub fn decompress<T>(
     compressed: &[u8],
     writer: &mut Writer<&mut BytesMut>,
     encoding_info: &[EncodingInfo],
-) -> Result<BytesMut, DEStruct>
+) -> Result<BytesMut, DecompressErrorStruct>
 where
     T: InfoLine,
     MessageHead<T>: ParseBodyHeaders,
@@ -107,7 +107,7 @@ where
                             one.truncate_header_value_on_position(einfo.header_index, encoding);
                         }
                     }
-                    return Err(DEStruct::new(output, None, e));
+                    return Err(DecompressErrorStruct::new(output, None, e));
                 }
             }
         }

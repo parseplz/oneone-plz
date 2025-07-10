@@ -17,26 +17,20 @@ pub enum DecompressError {
     Unknown(String),
 }
 
-impl DecompressError {
-    pub fn is_unknown_encoding(&self) -> bool {
-        matches!(self, DecompressError::Unknown(_))
-    }
-}
-
 #[derive(Debug)]
-pub struct DEStruct {
+pub struct DecompressErrorStruct {
     pub body: BytesMut,
     pub extra_body: Option<BytesMut>,
     pub error: DecompressError,
 }
 
-impl DEStruct {
+impl DecompressErrorStruct {
     pub fn is_unknown_encoding(&self) -> bool {
         matches!(self.error, DecompressError::Unknown(_))
     }
 
     pub fn new(body: BytesMut, extra_body: Option<BytesMut>, error: DecompressError) -> Self {
-        DEStruct {
+        DecompressErrorStruct {
             body,
             extra_body,
             error,
