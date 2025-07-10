@@ -1,5 +1,5 @@
 use super::*;
-use oneone_plz::oneone::build::BuildFrame;
+use oneone_plz::oneone::build::BuildMessage;
 
 #[test]
 fn response_update() {
