@@ -3,11 +3,10 @@ use header_plz::{Request, methods::METHODS_WITH_BODY};
 use super::*;
 
 /* Steps:
- *      1. Call update_one_one() with buf
- *      2. If method is in METHODS_WITH_BODY and no content length header is
- *         present, add Content-Length of zero.
+ *      If method is in METHODS_WITH_BODY and no content length header is
+ *      present, add Content-Length of zero.
  *
- * Note:
+ * TODO:
  *      https://github.com/curl/curl/issues/13380
  *      Adding "Content-Length: 0" is not mandatory.
  */
