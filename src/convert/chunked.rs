@@ -29,19 +29,20 @@ where
     let body = one.get_body().into_chunks();
     buf.reserve(total_chunk_size(&body));
     let mut new_body = buf.split();
-    body.into_iter().for_each(|chunk| match chunk {
-        // 1. Combine ChunkType::Chunk into one body.
-        ChunkType::Chunk(data) => new_body.extend_from_slice(&data[..data.len() - 2]),
-        // 2. If trailer is present,
-        ChunkType::Trailers(trailer) => {
-            // 2.a. Remove trailer header
-            one.remove_header_on_key(TRAILER);
-            // 2.b. Add trailer to header_map
-            let trailer_header = trailer.into_header_vec();
-            one.append_headers(trailer_header);
+    body.into_iter().for_each(|chunk| {
+        match chunk {
+            // 1. Combine ChunkType::Chunk into one body.
+            ChunkType::Chunk(data) => new_body.extend_from_slice(&data[..data.len() - 2]),
+            // 2. If trailer is present,
+            ChunkType::Trailers(trailer) => {
+                // 2.a. Remove trailer header
+                one.remove_header_on_key(TRAILER);
+                // 2.b. Add trailer to header_map
+                let trailer_header = trailer.into_header_vec();
+                one.append_headers(trailer_header);
+            }
+            _ => (),
         }
-        ChunkType::Extra(data) => new_body.extend_from_slice(&data),
-        _ => (),
     });
     one.set_body(Body::Raw(new_body));
 }

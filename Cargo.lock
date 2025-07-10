@@ -31,9 +31,9 @@ checksum = "1b8e56985ec62d17e9c1001dc89c88ecd7dc08e47eba5ec7c29c7b5eeecde967"
 
 [[package]]
 name = "body-plz"
-version = "0.0.25"
+version = "0.0.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8d2ce55ab11bee0065cf886cf686db7510ec606d875f5759b6fb39d6a134cf66"
+checksum = "c526508de1220201ee653066cc8762a6a20694e50e358fefb11463aa24b7d056"
 dependencies = [
  "buffer-plz",
  "bytes",

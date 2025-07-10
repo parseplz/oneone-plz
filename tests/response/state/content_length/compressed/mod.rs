@@ -4,8 +4,8 @@ use std::io::{Read, Write};
 mod transfer_encoding;
 
 use flate2::{
-    read::{DeflateEncoder, GzEncoder},
     Compression,
+    read::{DeflateEncoder, GzEncoder},
 };
 
 use super::*;
