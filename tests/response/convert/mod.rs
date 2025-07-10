@@ -1,7 +1,6 @@
 use super::*;
 
 mod content_length;
-mod decompress;
 
 #[test]
 fn test_response_convert_no_cl() {

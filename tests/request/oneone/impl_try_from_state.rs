@@ -61,7 +61,7 @@ fn test_request_try_from_state_remove_proxy_header() {
                  Proxy-Connection: keep-alive\r\n\r\n";
     let result = poll_oneone_only_read::<Request>(input.as_bytes());
     let verify = "GET / HTTP/1.1\r\n\
-                   Host: example.com\r\n\r\n";
+                  Host: example.com\r\n\r\n";
     assert_eq!(result.into_bytes(), verify);
 }
 
@@ -72,7 +72,7 @@ fn test_request_try_from_state_modify_connection_header() {
                  Connection: keep-alive\r\n\r\n";
     let result = poll_oneone_only_read::<Request>(input.as_bytes());
     let verify = "GET / HTTP/1.1\r\n\
-                   Host: example.com\r\n\
-                   Connection: close\r\n\r\n";
+                  Host: example.com\r\n\
+                  Connection: close\r\n\r\n";
     assert_eq!(result.into_bytes(), verify);
 }

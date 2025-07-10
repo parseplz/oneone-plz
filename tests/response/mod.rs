@@ -10,7 +10,6 @@ mod convert;
 mod oneone;
 mod state;
 //
-mod transfer_encoding;
 
 /*
 // #[test]
