@@ -27,7 +27,11 @@ pub struct DecompressErrorStruct {
 }
 
 impl DecompressErrorStruct {
-    pub fn new(body: BytesMut, extra_body: Option<BytesMut>, error: DecompressError) -> Self {
+    pub fn new(
+        body: BytesMut,
+        extra_body: Option<BytesMut>,
+        error: DecompressError,
+    ) -> Self {
         DecompressErrorStruct {
             body,
             extra_body,

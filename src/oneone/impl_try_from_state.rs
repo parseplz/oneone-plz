@@ -21,7 +21,9 @@ where
 {
     type Error = MessageFramingError;
 
-    fn try_from((state, buf): (State<T>, &mut BytesMut)) -> Result<Self, Self::Error> {
+    fn try_from(
+        (state, buf): (State<T>, &mut BytesMut),
+    ) -> Result<Self, Self::Error> {
         let result = match state {
             State::End(mut one) => {
                 if one.body().is_some() {
@@ -40,7 +42,11 @@ where
                     Err(e) => Err((one, e)),
                 }
             }
-            _ => return Err(MessageFramingError::IncorrectState(state.to_string())),
+            _ => {
+                return Err(MessageFramingError::IncorrectState(
+                    state.to_string(),
+                ));
+            }
         };
 
         let mut one = match result {

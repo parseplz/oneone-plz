@@ -51,7 +51,8 @@ fn test_response_state_chunked_extra_finished_single() {
     assert!(matches!(state, State::End(_)));
     let mut cbuf = Cursor::new(&mut buf);
 
-    cbuf.as_mut().extend_from_slice(b"extra data added");
+    cbuf.as_mut()
+        .extend_from_slice(b"extra data added");
     let result = state
         .try_next(Event::End(&mut cbuf))
         .unwrap()
@@ -76,13 +77,19 @@ fn test_response_state_chunked_extra_finished_multiple() {
     assert!(matches!(state, State::End(_)));
 
     // extra 1
-    cbuf.as_mut().extend_from_slice(b"extra data");
-    state = state.try_next(Event::Read(&mut cbuf)).unwrap();
+    cbuf.as_mut()
+        .extend_from_slice(b"extra data");
+    state = state
+        .try_next(Event::Read(&mut cbuf))
+        .unwrap();
     assert!(matches!(state, State::ReadBodyChunkedExtra(_)));
 
     // extra 2
-    cbuf.as_mut().extend_from_slice(b" added");
-    state = state.try_next(Event::End(&mut cbuf)).unwrap();
+    cbuf.as_mut()
+        .extend_from_slice(b" added");
+    state = state
+        .try_next(Event::End(&mut cbuf))
+        .unwrap();
 
     let result = state.try_into_frame().unwrap();
     let verify = "HTTP/1.1 200 OK\r\n\

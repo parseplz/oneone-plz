@@ -21,7 +21,8 @@ fn test_response_state_cl_decompress_ce_complete_error_multiple_ce() {
 }
 
 #[test]
-fn test_response_state_cl_decompress_ce_complete_error_multiple_ce_single_header() {
+fn test_response_state_cl_decompress_ce_complete_error_multiple_ce_single_header()
+ {
     let compressed = compressed_data();
     let mut input: Vec<u8> = format!(
         "HTTP/1.1 200 OK\r\n\
@@ -44,7 +45,8 @@ fn test_response_state_cl_decompress_ce_complete_error_multiple_ce_single_header
 }
 
 #[test]
-fn test_response_state_cl_decompress_ce_complete_error_multiple_ce_multiple_header() {
+fn test_response_state_cl_decompress_ce_complete_error_multiple_ce_multiple_header()
+ {
     let compressed = compressed_data();
     let mut input: Vec<u8> = format!(
         "HTTP/1.1 200 OK\r\n\

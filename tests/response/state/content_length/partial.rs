@@ -31,7 +31,9 @@ fn test_response_state_content_length_partial_fix() {
                       h";
         assert_eq!(
             verify,
-            OneOne::<Response>::try_from(e).unwrap().into_bytes()
+            OneOne::<Response>::try_from(e)
+                .unwrap()
+                .into_bytes()
         );
     } else {
         panic!()
@@ -82,7 +84,9 @@ fn test_response_state_content_length_no_body_fix() {
         matches!(e, HttpStateError::ContentLengthPartial(_, _));
         assert_eq!(
             verify,
-            OneOne::<Response>::try_from(e).unwrap().into_bytes()
+            OneOne::<Response>::try_from(e)
+                .unwrap()
+                .into_bytes()
         );
     } else {
         panic!()

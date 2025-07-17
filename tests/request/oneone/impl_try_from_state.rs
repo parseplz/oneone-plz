@@ -31,7 +31,8 @@ fn test_request_try_from_state_incorrect_state() {
 
     //
     let request = OneOne::<Request>::try_from(BytesMut::from(input)).unwrap();
-    let state: State<Request> = State::ReadBodyChunked(request, ChunkReaderState::ReadSize);
+    let state: State<Request> =
+        State::ReadBodyChunked(request, ChunkReaderState::ReadSize);
     assert!(matches!(
         state.try_into_frame(),
         Err(MessageFramingError::IncorrectState(_))

@@ -32,7 +32,10 @@ where
     T: InfoLine,
     MessageHead<T>: ParseBodyHeaders,
 {
-    pub fn new(message_head: MessageHead<T>, body_headers: Option<BodyHeader>) -> Self {
+    pub fn new(
+        message_head: MessageHead<T>,
+        body_headers: Option<BodyHeader>,
+    ) -> Self {
         OneOne {
             message_head,
             body_headers,
@@ -41,7 +44,9 @@ where
     }
 
     // parse from message_head
-    pub fn try_from_message_head_buf(buf: BytesMut) -> Result<Self, HeaderReadError> {
+    pub fn try_from_message_head_buf(
+        buf: BytesMut,
+    ) -> Result<Self, HeaderReadError> {
         let message_head = MessageHead::<T>::try_from(buf)?;
         let body_headers = message_head.parse_body_headers();
         Ok(OneOne::<T>::new(message_head, body_headers))
@@ -53,12 +58,16 @@ where
     }
 
     pub fn has_header_key(&self, key: &str) -> Option<usize> {
-        self.message_head.header_map().header_key_position(key)
+        self.message_head
+            .header_map()
+            .header_key_position(key)
     }
 
     pub fn add_header(&mut self, key: &str, value: &str) {
         let header: Header = (key, value).into();
-        self.message_head.header_map_as_mut().add_header(header);
+        self.message_head
+            .header_map_as_mut()
+            .add_header(header);
     }
 
     pub fn append_headers(&mut self, mut headers: Vec<Header>) {
@@ -68,13 +77,21 @@ where
             .append(&mut headers);
     }
 
-    pub fn update_header_value_on_position(&mut self, pos: usize, value: &str) {
+    pub fn update_header_value_on_position(
+        &mut self,
+        pos: usize,
+        value: &str,
+    ) {
         self.message_head
             .header_map_as_mut()
             .update_header_value_on_position(pos, value);
     }
 
-    pub fn update_header_value_on_key(&mut self, key: &str, value: &str) -> bool {
+    pub fn update_header_value_on_key(
+        &mut self,
+        key: &str,
+        value: &str,
+    ) -> bool {
         self.message_head
             .header_map_as_mut()
             .update_header_value_on_key(key, value)
@@ -92,8 +109,11 @@ where
             .remove_header_on_key(key)
     }
 
-    pub fn truncate_header_value_on_position<E>(&mut self, pos: usize, truncate_at: E)
-    where
+    pub fn truncate_header_value_on_position<E>(
+        &mut self,
+        pos: usize,
+        truncate_at: E,
+    ) where
         E: AsRef<str>,
     {
         self.message_head
@@ -157,7 +177,9 @@ where
         if let Some(body) = self.body {
             let body = match body {
                 Body::Raw(body) => body,
-                Body::Chunked(items) => partial_chunked_to_raw(items).unwrap_or_default(),
+                Body::Chunked(items) => {
+                    partial_chunked_to_raw(items).unwrap_or_default()
+                }
             };
             header.unsplit(body);
         }

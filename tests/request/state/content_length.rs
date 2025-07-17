@@ -20,7 +20,10 @@ fn test_request_state_post_empty_body() {
     let (mut buf, state) = poll_state_once::<Request>(input.as_bytes());
 
     if let State::End(_) = state {
-        let result = state.try_into_frame().unwrap().into_bytes();
+        let result = state
+            .try_into_frame()
+            .unwrap()
+            .into_bytes();
         assert_eq!(result, input.as_bytes());
     } else {
         panic!("Expected State::End, found {:?}", state);

@@ -3,12 +3,15 @@ use std::io::copy;
 use bytes::{BufMut, BytesMut, buf::Writer};
 use header_plz::{
     body_headers::{
-        content_encoding::ContentEncoding, encoding_info::EncodingInfo, parse::ParseBodyHeaders,
+        content_encoding::ContentEncoding, encoding_info::EncodingInfo,
+        parse::ParseBodyHeaders,
     },
     message_head::{MessageHead, info_line::InfoLine},
 };
 pub mod error;
-use crate::{convert::decompress::error::DecompressErrorStruct, oneone::OneOne};
+use crate::{
+    convert::decompress::error::DecompressErrorStruct, oneone::OneOne,
+};
 use error::DecompressError;
 
 pub fn decompress_body<T>(
@@ -23,7 +26,12 @@ where
     MessageHead<T>: ParseBodyHeaders,
 {
     // Start
-    let capacity = 2 * (main_body.len() + extra_body.as_ref().map(|b| b.len()).unwrap_or(0));
+    let capacity = 2
+        * (main_body.len()
+            + extra_body
+                .as_ref()
+                .map(|b| b.len())
+                .unwrap_or(0));
     buf.reserve(capacity);
     let mut buf_writer = buf.writer();
 
@@ -39,7 +47,9 @@ where
                 if e.is_unknown_encoding() {
                     return Err(e);
                 } else {
-                    let _ = buf_writer.get_mut().try_reclaim(capacity);
+                    let _ = buf_writer
+                        .get_mut()
+                        .try_reclaim(capacity);
                     buf_writer.get_mut().clear();
                 }
             }
@@ -49,7 +59,12 @@ where
         let extra = main_body.split_off(main_org_len);
 
         // 3. Try main
-        let main_decompressed = match decompress(one, &main_body[..], &mut buf_writer, encodings) {
+        let main_decompressed = match decompress(
+            one,
+            &main_body[..],
+            &mut buf_writer,
+            encodings,
+        ) {
             Ok(buf) => buf,
             Err(mut e) => {
                 e.extra_body = Some(extra);
@@ -58,13 +73,15 @@ where
         };
 
         // 4. extra decompressed separately
-        let extra_decompressed = match decompress(one, &extra[..], &mut buf_writer, encodings) {
-            Ok(out) => out,  // compressed separately
-            Err(_) => extra, // clear text ?
-        };
+        let extra_decompressed =
+            match decompress(one, &extra[..], &mut buf_writer, encodings) {
+                Ok(out) => out,  // compressed separately
+                Err(_) => extra, // clear text ?
+            };
         Ok((main_decompressed, Some(extra_decompressed)))
     } else {
-        let body = decompress(one, &main_body[..], &mut buf_writer, encodings)?;
+        let body =
+            decompress(one, &main_body[..], &mut buf_writer, encodings)?;
         Ok((body, None))
     }
 }
@@ -83,7 +100,12 @@ where
     let mut output: BytesMut = writer.get_mut().split();
 
     for encoding_info in encoding_info.iter().rev() {
-        for (index, encoding) in encoding_info.encodings().iter().rev().enumerate() {
+        for (index, encoding) in encoding_info
+            .encodings()
+            .iter()
+            .rev()
+            .enumerate()
+        {
             let result = match encoding {
                 ContentEncoding::Brotli => decompress_brotli(input, writer),
                 ContentEncoding::Chunked => continue,
@@ -92,8 +114,12 @@ where
                 ContentEncoding::Identity => {
                     copy(&mut input, writer).map_err(DecompressError::Identity)
                 }
-                ContentEncoding::Zstd | ContentEncoding::Compress => decompress_zstd(input, writer),
-                ContentEncoding::Unknown(e) => Err(DecompressError::Unknown(e.to_string())),
+                ContentEncoding::Zstd | ContentEncoding::Compress => {
+                    decompress_zstd(input, writer)
+                }
+                ContentEncoding::Unknown(e) => {
+                    Err(DecompressError::Unknown(e.to_string()))
+                }
             };
 
             match result {
@@ -108,7 +134,9 @@ where
                     // truncate till compression in header
                     let index = encoding_info.encodings().len() - index;
                     if index > 0 {
-                        if let Some(encoding) = encoding_info.encodings().get(index) {
+                        if let Some(encoding) =
+                            encoding_info.encodings().get(index)
+                        {
                             one.truncate_header_value_on_position(
                                 encoding_info.header_index,
                                 encoding,
@@ -159,6 +187,7 @@ fn decompress_zstd(
     data: &[u8],
     writer: &mut Writer<&mut BytesMut>,
 ) -> Result<u64, DecompressError> {
-    let mut reader = zstd::stream::read::Decoder::new(data).map_err(DecompressError::Zstd)?;
+    let mut reader = zstd::stream::read::Decoder::new(data)
+        .map_err(DecompressError::Zstd)?;
     copy(&mut reader, writer).map_err(DecompressError::Zstd)
 }

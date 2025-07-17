@@ -40,7 +40,8 @@ where
             .position(|window| window == HEADER_DELIMITER)
             .ok_or(BuildMessageError::UnableToFindCRLF)?;
         let message_head = buf.split_to(index + HEADER_DELIMITER.len());
-        let mut one: OneOne<T> = OneOne::try_from_message_head_buf(message_head)?;
+        let mut one: OneOne<T> =
+            OneOne::try_from_message_head_buf(message_head)?;
         if !buf.is_empty() {
             let len = buf.len().to_string();
             one.set_body(Body::Raw(buf));

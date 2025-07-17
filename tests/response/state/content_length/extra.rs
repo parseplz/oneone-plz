@@ -5,10 +5,11 @@ fn test_response_state_content_length_extra() {
     let input = "HTTP/1.1 200 OK\r\n\
                  Content-Length: 5\r\n\r\n\
                  hello world more data";
-    let response: OneOne<Response> = poll_state_result_with_end(input.as_bytes())
-        .unwrap()
-        .try_into_frame()
-        .unwrap();
+    let response: OneOne<Response> =
+        poll_state_result_with_end(input.as_bytes())
+            .unwrap()
+            .try_into_frame()
+            .unwrap();
     let verify = "HTTP/1.1 200 OK\r\n\
                   Content-Length: 21\r\n\r\n\
                   hello world more data";

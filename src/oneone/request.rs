@@ -18,10 +18,15 @@ impl OneOne<Request> {
     }
 
     pub fn method_as_enum(&self) -> Method {
-        self.message_head.infoline().method().into()
+        self.message_head
+            .infoline()
+            .method()
+            .into()
     }
 
     pub fn uri_as_string(&self) -> Cow<str> {
-        self.message_head.infoline().uri_as_string()
+        self.message_head
+            .infoline()
+            .uri_as_string()
     }
 }

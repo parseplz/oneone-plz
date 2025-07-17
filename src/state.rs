@@ -1,7 +1,10 @@
 use std::fmt::Display;
 
 use body_plz::{
-    reader::{chunked_reader::ChunkReaderState, content_length_reader::read_content_length},
+    reader::{
+        chunked_reader::ChunkReaderState,
+        content_length_reader::read_content_length,
+    },
     variants::Body,
 };
 use buffer_plz::Event;
@@ -97,41 +100,55 @@ where
 
     fn try_next(mut self, event: Event) -> Result<Self, Self::StateError> {
         match (self, event) {
-            (State::ReadMessageHead, Event::Read(buf)) => match MessageHead::is_complete(buf) {
-                true => {
-                    let raw_headers = buf.split_at_current_pos();
-                    self = State::build_oneone(raw_headers)?;
-                    if buf.len() > 0 {
-                        self = self.try_next(Event::Read(buf))?;
+            (State::ReadMessageHead, Event::Read(buf)) => {
+                match MessageHead::is_complete(buf) {
+                    true => {
+                        let raw_headers = buf.split_at_current_pos();
+                        self = State::build_oneone(raw_headers)?;
+                        if buf.len() > 0 {
+                            self = self.try_next(Event::Read(buf))?;
+                        }
+                        Ok(self)
                     }
-                    Ok(self)
+                    false => Ok(Self::ReadMessageHead),
                 }
-                false => Ok(Self::ReadMessageHead),
-            },
+            }
             (State::ReadMessageHead, Event::End(buf)) => {
                 Err(HttpStateError::Unparsed(buf.into_inner()))?
             }
-            (State::ReadBodyContentLength(mut oneone, mut size), mut event) => match event {
+            (
+                State::ReadBodyContentLength(mut oneone, mut size),
+                mut event,
+            ) => match event {
                 Event::Read(ref mut buf) | Event::End(ref mut buf) => {
                     match read_content_length(buf, &mut size) {
                         true => {
-                            oneone.set_body(Body::Raw(buf.split_at_current_pos()));
+                            oneone.set_body(Body::Raw(
+                                buf.split_at_current_pos(),
+                            ));
                             if buf.len() > 0 {
-                                let next_state = State::ReadBodyContentLengthExtra(oneone);
+                                let next_state =
+                                    State::ReadBodyContentLengthExtra(oneone);
                                 match event {
                                     Event::Read(_) => Ok(next_state),
-                                    Event::End(_) => next_state.try_next(event),
+                                    Event::End(_) => {
+                                        next_state.try_next(event)
+                                    }
                                 }
                             } else {
                                 Ok(State::End(oneone))
                             }
                         }
                         false => match event {
-                            Event::Read(_) => Ok(State::ReadBodyContentLength(oneone, size)),
-                            Event::End(buf) => Err(HttpStateError::ContentLengthPartial(
-                                oneone,
-                                buf.split_at_current_pos(),
-                            ))?,
+                            Event::Read(_) => {
+                                Ok(State::ReadBodyContentLength(oneone, size))
+                            }
+                            Event::End(buf) => {
+                                Err(HttpStateError::ContentLengthPartial(
+                                    oneone,
+                                    buf.split_at_current_pos(),
+                                ))?
+                            }
                         },
                     }
                 }
@@ -143,10 +160,16 @@ where
                 let extra_body = buf.into_inner();
                 Ok(State::ReadBodyContentLengthExtraEnd(oneone, extra_body))
             }
-            (State::ReadBodyChunked(mut oneone, mut chunk_state), Event::Read(buf)) => loop {
+            (
+                State::ReadBodyChunked(mut oneone, mut chunk_state),
+                Event::Read(buf),
+            ) => loop {
                 match chunk_state.next(buf) {
                     Some(chunk_to_add) => {
-                        oneone.body_as_mut().unwrap().push_chunk(chunk_to_add);
+                        oneone
+                            .body_as_mut()
+                            .unwrap()
+                            .push_chunk(chunk_to_add);
                         match chunk_state {
                             ChunkReaderState::LastChunk => {
                                 chunk_state = if oneone.has_trailers() {
@@ -163,18 +186,23 @@ where
                                     Ok(State::End(oneone))
                                 };
                             }
-                            ChunkReaderState::Failed(e) => return Err(e.into()),
+                            ChunkReaderState::Failed(e) => {
+                                return Err(e.into());
+                            }
                             _ => continue,
                         }
                     }
                     None => {
-                        return Ok(State::ReadBodyChunked(oneone, chunk_state));
+                        return Ok(State::ReadBodyChunked(
+                            oneone,
+                            chunk_state,
+                        ));
                     }
                 }
             },
-            (State::ReadBodyChunked(oneone, _), Event::End(buf)) => {
-                Err(HttpStateError::ChunkReaderPartial(oneone, buf.into_inner()))
-            }
+            (State::ReadBodyChunked(oneone, _), Event::End(buf)) => Err(
+                HttpStateError::ChunkReaderPartial(oneone, buf.into_inner()),
+            ),
             (State::ReadBodyChunkedExtra(oneone), Event::Read(_)) => {
                 Ok(State::ReadBodyChunkedExtra(oneone))
             }
@@ -182,7 +210,9 @@ where
                 let extra_body = buf.into_inner();
                 Ok(State::ReadBodyChunkedExtraEnd(oneone, extra_body))
             }
-            (State::ReadBodyClose(oneone), Event::Read(_)) => Ok(Self::ReadBodyClose(oneone)),
+            (State::ReadBodyClose(oneone), Event::Read(_)) => {
+                Ok(Self::ReadBodyClose(oneone))
+            }
             (State::ReadBodyClose(mut oneone), Event::End(buf)) => {
                 oneone.set_body(Body::Raw(buf.into_inner()));
                 Ok(State::End(oneone))
@@ -190,8 +220,12 @@ where
             (State::End(oneone), event) => {
                 self = match oneone.body() {
                     None => State::ReadBodyClose(oneone),
-                    Some(Body::Raw(_)) => State::ReadBodyContentLengthExtra(oneone),
-                    Some(Body::Chunked(_)) => State::ReadBodyChunkedExtra(oneone),
+                    Some(Body::Raw(_)) => {
+                        State::ReadBodyContentLengthExtra(oneone)
+                    }
+                    Some(Body::Chunked(_)) => {
+                        State::ReadBodyChunkedExtra(oneone)
+                    }
                 };
                 match event {
                     Event::Read(_) => Ok(self),
@@ -199,7 +233,9 @@ where
                 }
             }
             (State::ReadBodyContentLengthExtraEnd(..), _)
-            | (State::ReadBodyChunkedExtraEnd(..), _) => unreachable!("not possible"),
+            | (State::ReadBodyChunkedExtraEnd(..), _) => {
+                unreachable!("not possible")
+            }
         }
     }
 
@@ -222,16 +258,24 @@ where
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             State::ReadMessageHead => write!(f, "ReadMessageHead"),
-            State::ReadBodyContentLength(_, _) => write!(f, "ReadBodyContentLength"),
-            State::ReadBodyContentLengthExtra(_) => write!(f, "ReadBodyContentLengthExtra"),
+            State::ReadBodyContentLength(_, _) => {
+                write!(f, "ReadBodyContentLength")
+            }
+            State::ReadBodyContentLengthExtra(_) => {
+                write!(f, "ReadBodyContentLengthExtra")
+            }
             State::ReadBodyChunked(_, _) => write!(f, "ReadBodyChunked"),
-            State::ReadBodyChunkedExtra(_) => write!(f, "ReadBodyChunkedExtra"),
+            State::ReadBodyChunkedExtra(_) => {
+                write!(f, "ReadBodyChunkedExtra")
+            }
             State::ReadBodyClose(_) => write!(f, "ReadBodyClose"),
             State::End(_) => write!(f, "End"),
             State::ReadBodyContentLengthExtraEnd(_, _) => {
                 write!(f, "ReadBodyContentLengthExtraEnd")
             }
-            State::ReadBodyChunkedExtraEnd(_, _) => write!(f, "ReadBodyChunkedExtraEnd"),
+            State::ReadBodyChunkedExtraEnd(_, _) => {
+                write!(f, "ReadBodyChunkedExtraEnd")
+            }
         }
     }
 }

@@ -32,7 +32,9 @@ where
     body.into_iter().for_each(|chunk| {
         match chunk {
             // 1. Combine ChunkType::Chunk into one body.
-            ChunkType::Chunk(data) => new_body.extend_from_slice(&data[..data.len() - 2]),
+            ChunkType::Chunk(data) => {
+                new_body.extend_from_slice(&data[..data.len() - 2])
+            }
             // 2. If trailer is present,
             ChunkType::Trailers(trailer) => {
                 // 2.a. Remove trailer header
@@ -49,7 +51,9 @@ where
 
 // Partial chunked body
 pub fn partial_chunked_to_raw(vec_body: Vec<ChunkType>) -> Option<BytesMut> {
-    let mut iter = vec_body.into_iter().map(|c| c.into_bytes());
+    let mut iter = vec_body
+        .into_iter()
+        .map(|c| c.into_bytes());
     let mut body = iter.next()?;
 
     for chunk in iter {

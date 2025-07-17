@@ -23,7 +23,8 @@ fn test_response_state_message_head_multiple() {
     let event = Event::Read(&mut cbuf);
     state = state.try_next(event).unwrap();
     assert!(matches!(state, State::ReadMessageHead));
-    cbuf.as_mut().extend_from_slice(b"Server: Apache\r\n");
+    cbuf.as_mut()
+        .extend_from_slice(b"Server: Apache\r\n");
     let event = Event::Read(&mut cbuf);
     state = state.try_next(event).unwrap();
     assert!(matches!(state, State::ReadMessageHead));

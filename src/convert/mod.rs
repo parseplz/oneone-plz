@@ -62,31 +62,55 @@ where
         if let Some(index) = is_only_te_chunked(einfo_list) {
             one.remove_header_on_position(index);
         } else {
-            match decompress_body(one, body, extra_body.take(), einfo_list, buf) {
+            match decompress_body(
+                one,
+                body,
+                extra_body.take(),
+                einfo_list,
+                buf,
+            ) {
                 Ok((result_body, result_extra_body)) => {
                     body = result_body;
                     extra_body = result_extra_body;
                 }
                 Err(e) => {
                     let (body, e) = e.into_body_and_error();
-                    match body_headers.as_ref().unwrap().chunked_te_position() {
+                    match body_headers
+                        .as_ref()
+                        .unwrap()
+                        .chunked_te_position()
+                    {
                         // if chunked is only value
-                        Some((header_index, 0)) => one.remove_header_on_position(header_index),
+                        Some((header_index, 0)) => {
+                            one.remove_header_on_position(header_index)
+                        }
                         // has other values
                         Some((header_index, value_index)) => {
                             // if last in header truncate
-                            if einfo_list[header_index].encodings().len() == value_index + 1 {
-                                one.truncate_header_value_on_position(header_index, CHUNKED);
+                            if einfo_list[header_index]
+                                .encodings()
+                                .len()
+                                == value_index + 1
+                            {
+                                one.truncate_header_value_on_position(
+                                    header_index,
+                                    CHUNKED,
+                                );
                                 // else create new string and assign
                             } else {
                                 let value = einfo_list[header_index]
                                     .encodings()
                                     .iter()
-                                    .filter(|e| !matches!(e, ContentEncoding::Chunked))
+                                    .filter(|e| {
+                                        !matches!(e, ContentEncoding::Chunked)
+                                    })
                                     .map(AsRef::as_ref)
                                     .collect::<Vec<_>>()
                                     .join(", ");
-                                one.update_header_value_on_position(header_index, &value)
+                                one.update_header_value_on_position(
+                                    header_index,
+                                    &value,
+                                )
                             }
                         }
                         _ => (),
@@ -145,7 +169,8 @@ mod tests {
 
     #[test]
     fn test_is_only_te_chunked_single() {
-        let einfo_list = vec![EncodingInfo::new(0, vec![ContentEncoding::Chunked])];
+        let einfo_list =
+            vec![EncodingInfo::new(0, vec![ContentEncoding::Chunked])];
         assert_eq!(is_only_te_chunked(&einfo_list), Some(0));
     }
 
