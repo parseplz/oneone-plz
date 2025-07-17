@@ -1,0 +1,11 @@
+chain_width = 40
+edition = "2021"
+max_width = 79
+reorder_imports = true
+use_small_heuristics = "Off"
+
+# // nightly
+# imports_layout = "Horizontal"
+# imports_granularity = "Module"
+# group_imports = "StdExternalCrate"
+# ignore = [ "mime_type" ]

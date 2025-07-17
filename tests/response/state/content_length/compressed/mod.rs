@@ -7,7 +7,6 @@ mod content_encoding;
 mod transfer_encoding;
 
 pub fn compressed_data() -> Vec<u8> {
-    let level = 0;
     let data = b"hello world";
     let brotli_compressed = compress_brotli(data);
     let deflate_compressed = compress_deflate(&brotli_compressed);
