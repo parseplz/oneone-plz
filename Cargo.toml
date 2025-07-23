@@ -11,15 +11,10 @@ edition = "2024"
 # primitives
 body-plz = "0.0.30"
 buffer-plz = "0.0.3"
+decompression-plz = "0.0.2"
 header-plz = "0.0.25"
 protocol-traits-plz = "0.0.4"
 
 # basic 
 bytes = "1.10.1"
 thiserror = "2.0.12"
-
-# compression
-brotli = "8.0.0"
-flate2 = "1.1.0"
-zstd = "0.13.3"
-decompression-plz = "0.0.2"

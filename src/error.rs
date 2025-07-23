@@ -1,5 +1,8 @@
 use body_plz::{reader::chunked_reader::ChunkReaderError, variants::Body};
 use bytes::BytesMut;
+use decompression_plz::{
+    DecompressTrait, content_length::update_content_length,
+};
 use header_plz::{
     InfoLine, body_headers::parse::ParseBodyHeaders, error::HeaderReadError,
     message_head::MessageHead,
@@ -7,7 +10,7 @@ use header_plz::{
 use protocol_traits_plz::Frame;
 use thiserror::Error;
 
-use crate::{convert::content_length::update_content_length, oneone::OneOne};
+use crate::oneone::OneOne;
 
 #[derive(Debug, Error)]
 pub enum HttpStateError<T>
@@ -57,8 +60,8 @@ where
         match value {
             HttpStateError::ContentLengthPartial(mut oneone, buf) => {
                 let len = buf.len();
-                oneone.set_body(Body::Raw(buf));
-                update_content_length(&mut oneone, len);
+                (&mut oneone).set_body(Body::Raw(buf));
+                update_content_length(&mut (&mut oneone), len);
                 Ok(oneone)
             }
             _ => Err(value),

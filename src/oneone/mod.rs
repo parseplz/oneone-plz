@@ -8,6 +8,7 @@ use header_plz::{
     message_head::MessageHead,
 };
 use protocol_traits_plz::Frame;
+mod impl_decompress;
 pub mod impl_try_from_bytes;
 pub mod impl_try_from_state;
 
@@ -129,25 +130,12 @@ where
     }
 
     // Body Headers Related
+    pub fn body(&self) -> &Option<Body> {
+        &self.body
+    }
+
     pub fn body_headers(&self) -> &Option<BodyHeader> {
         &self.body_headers
-    }
-
-    pub fn body_headers_as_mut(&mut self) -> &mut Option<BodyHeader> {
-        &mut self.body_headers
-    }
-
-    // Body Related
-    pub fn set_body(&mut self, body: Body) {
-        self.body = Some(body);
-    }
-
-    pub fn get_body(&mut self) -> Body {
-        self.body.take().unwrap()
-    }
-
-    pub fn body(&self) -> Option<&Body> {
-        self.body.as_ref()
     }
 
     pub fn body_as_mut(&mut self) -> Option<&mut Body> {

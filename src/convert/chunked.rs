@@ -5,6 +5,7 @@ use body_plz::variants::{
 };
 use bytes::BytesMut;
 
+use decompression_plz::DecompressTrait;
 use header_plz::{
     body_headers::parse::ParseBodyHeaders,
     const_headers::TRAILER,
@@ -21,7 +22,7 @@ use header_plz::{
  *          b. add trailer to header_map.
  */
 
-pub fn chunked_to_raw<T>(one: &mut OneOne<T>, buf: &mut BytesMut)
+pub fn chunked_to_raw<T>(mut one: &mut OneOne<T>, buf: &mut BytesMut)
 where
     T: InfoLine,
     MessageHead<T>: ParseBodyHeaders,

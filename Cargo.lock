@@ -31,9 +31,9 @@ checksum = "1b8e56985ec62d17e9c1001dc89c88ecd7dc08e47eba5ec7c29c7b5eeecde967"
 
 [[package]]
 name = "body-plz"
-version = "0.0.26"
+version = "0.0.30"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c526508de1220201ee653066cc8762a6a20694e50e358fefb11463aa24b7d056"
+checksum = "c79e6403fc2e0b1821a4b59e9dbe5ffcc29ca80b17ea3fcf60e47d8583dcde2c"
 dependencies = [
  "buffer-plz",
  "bytes",
@@ -105,6 +105,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "decompression-plz"
+version = "0.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a2e9df52035e00d70b13eba4811c2810a6b16a374104bcda4308ada46fd25bb4"
+dependencies = [
+ "body-plz",
+ "brotli",
+ "bytes",
+ "flate2",
+ "header-plz",
+ "thiserror",
+ "tracing",
+ "zstd",
+]
+
+[[package]]
 name = "flate2"
 version = "1.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -134,9 +150,9 @@ dependencies = [
 
 [[package]]
 name = "header-plz"
-version = "0.0.21"
+version = "0.0.25"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ee9faaa7d53d4eee870962f4f49e109e56df69ea23d1a7b970daec57bb58960e"
+checksum = "ebd97c32773af7a6df999ca94cea1f5f1bb63836d1d9679d38b2addd83766f43"
 dependencies = [
  "buffer-plz",
  "bytes",
@@ -222,14 +238,12 @@ name = "oneone-plz"
 version = "0.0.2"
 dependencies = [
  "body-plz",
- "brotli",
  "buffer-plz",
  "bytes",
- "flate2",
+ "decompression-plz",
  "header-plz",
  "protocol-traits-plz",
  "thiserror",
- "zstd",
 ]
 
 [[package]]

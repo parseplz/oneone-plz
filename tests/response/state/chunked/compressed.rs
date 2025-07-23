@@ -1,5 +1,4 @@
 use super::*;
-use crate::response::state::content_length::compressed::compressed_data;
 
 #[test]
 fn test_response_state_chunked_single_compressed() {
