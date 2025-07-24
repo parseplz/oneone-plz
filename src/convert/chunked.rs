@@ -22,7 +22,7 @@ use header_plz::{
  *          b. add trailer to header_map.
  */
 
-pub fn chunked_to_raw<T>(mut one: &mut OneOne<T>, buf: &mut BytesMut)
+pub fn chunked_to_raw<T>(one: &mut OneOne<T>, buf: &mut BytesMut)
 where
     T: InfoLine,
     MessageHead<T>: ParseBodyHeaders,

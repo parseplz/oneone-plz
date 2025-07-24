@@ -4,7 +4,7 @@ use header_plz::{HeaderMap, InfoLine, body_headers::BodyHeader};
 
 use crate::oneone::OneOne;
 
-impl<T> DecompressTrait for &mut OneOne<T>
+impl<T> DecompressTrait for OneOne<T>
 where
     T: InfoLine,
 {

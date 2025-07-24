@@ -45,7 +45,7 @@ where
             OneOne::try_from_message_head_buf(message_head)?;
         if !buf.is_empty() {
             let len = buf.len().to_string();
-            (&mut one).set_body(Body::Raw(buf));
+            one.set_body(Body::Raw(buf));
             if !one.update_header_value_on_key(CONTENT_LENGTH, len.as_str()) {
                 one.add_header(CONTENT_LENGTH, &len);
             }

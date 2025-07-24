@@ -79,7 +79,7 @@ where
                         }
                     }
                     TransferType::Chunked => {
-                        (&mut one).set_body(Body::Chunked(Vec::new()));
+                        one.set_body(Body::Chunked(Vec::new()));
                         Self::ReadBodyChunked(one, ChunkReaderState::ReadSize)
                     }
                     TransferType::Close => Self::ReadBodyClose(one),
@@ -124,7 +124,7 @@ where
                 Event::Read(ref mut buf) | Event::End(ref mut buf) => {
                     match read_content_length(buf, &mut size) {
                         true => {
-                            (&mut oneone).set_body(Body::Raw(
+                            oneone.set_body(Body::Raw(
                                 buf.split_at_current_pos(),
                             ));
                             if buf.len() > 0 {
@@ -215,7 +215,7 @@ where
                 Ok(Self::ReadBodyClose(oneone))
             }
             (State::ReadBodyClose(mut oneone), Event::End(buf)) => {
-                (&mut oneone).set_body(Body::Raw(buf.into_inner()));
+                oneone.set_body(Body::Raw(buf.into_inner()));
                 Ok(State::End(oneone))
             }
             (State::End(oneone), event) => {

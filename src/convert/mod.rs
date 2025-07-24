@@ -32,7 +32,7 @@ use crate::oneone::OneOne;
  */
 
 pub fn convert_body<T>(
-    mut one: &mut OneOne<T>,
+    one: &mut OneOne<T>,
     extra_body: Option<BytesMut>,
     buf: &mut BytesMut,
 ) -> Result<(), std::io::Error>

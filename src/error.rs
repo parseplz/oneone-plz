@@ -60,8 +60,8 @@ where
         match value {
             HttpStateError::ContentLengthPartial(mut oneone, buf) => {
                 let len = buf.len();
-                (&mut oneone).set_body(Body::Raw(buf));
-                update_content_length(&mut (&mut oneone), len);
+                oneone.set_body(Body::Raw(buf));
+                update_content_length(&mut oneone, len);
                 Ok(oneone)
             }
             _ => Err(value),
