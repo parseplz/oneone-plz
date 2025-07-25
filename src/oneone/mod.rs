@@ -12,7 +12,7 @@ use header_plz::{
     message_head::MessageHead,
 };
 use protocol_traits_plz::Frame;
-mod impl_decompress;
+pub mod impl_decompress;
 pub mod impl_try_from_bytes;
 
 pub mod build;
