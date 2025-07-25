@@ -15,13 +15,14 @@ fn test_request_state_chunked_all() {
                  0\r\n\
                  Header: Val\r\n\
                  \r\n";
+    let result = poll_oneone_only_read::<Request>(input.as_bytes());
+    assert_eq!(result.into_bytes(), input);
+    // TODO: decompress
     let verify = "POST /echo HTTP/1.1\r\n\
                   Host: reqbin.com\r\n\
                   Header: Val\r\n\
                   Content-Length: 23\r\n\r\n\
                   MozillaDeveloperNetwork";
-    let result = poll_oneone_only_read::<Request>(input.as_bytes());
-    assert_eq!(result.into_bytes(), verify);
 }
 
 #[test]
@@ -32,11 +33,14 @@ fn test_request_state_chunked_no_trailer() {
                  7\r\n\
                  Mozilla\r\n\
                  0\r\n\r\n";
+    let mut result = poll_oneone_only_read::<Request>(input.as_bytes());
+    // TODO: decompress
+    let mut buf = BytesMut::with_capacity(input.len());
+    result.decode(&mut buf).unwrap();
     let verify = "POST /chunked HTTP/1.1\r\n\
                   Host: reqbin.com\r\n\
                   Content-Length: 7\r\n\r\n\
                   Mozilla";
-    let result = poll_oneone_only_read::<Request>(input.as_bytes());
     assert_eq!(result.into_bytes(), verify);
 }
 

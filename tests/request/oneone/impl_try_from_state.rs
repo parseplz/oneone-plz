@@ -1,5 +1,5 @@
 use body_plz::reader::chunked_reader::ChunkReaderState;
-use oneone_plz::oneone::impl_try_from_state::MessageFramingError;
+use oneone_plz::error::MessageFramingError;
 
 use super::*;
 
