@@ -1,15 +1,15 @@
-use body_plz::variants::{chunked::ChunkType, Body};
+use body_plz::variants::{Body, chunked::ChunkType};
 use bytes::BytesMut;
-use decompression_plz::decompress;
 use decompression_plz::MultiDecompressErrorReason;
+use decompression_plz::decompress;
 use header_plz::{
-    body_headers::{parse::ParseBodyHeaders, BodyHeader},
+    Header, InfoLine,
+    body_headers::{BodyHeader, parse::ParseBodyHeaders},
     const_headers::{
         CLOSE, CONNECTION, KEEP_ALIVE, PROXY_CONNECTION, TRAILER, WS_EXT,
     },
     error::HeaderReadError,
     message_head::MessageHead,
-    Header, InfoLine,
 };
 use protocol_traits_plz::Frame;
 pub mod impl_decompress;
