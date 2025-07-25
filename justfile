@@ -14,7 +14,7 @@ default: check lint fmt test
 
 @test:
         echo "[+] Testing"
-        cargo nextest r
+        cargo nextest r --no-tests pass
 
 @commit-msg:
         sh ./just-scripts/commit-msg
