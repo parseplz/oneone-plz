@@ -1,5 +1,7 @@
-use body_plz::variants::Body;
+use body_plz::variants::{Body, chunked::ChunkType};
 use bytes::BytesMut;
+use decompression_plz::MultiDecompressErrorReason;
+use decompression_plz::decompress;
 use header_plz::{
     Header, InfoLine,
     body_headers::{BodyHeader, parse::ParseBodyHeaders},
@@ -12,8 +14,6 @@ use header_plz::{
 use protocol_traits_plz::Frame;
 mod impl_decompress;
 pub mod impl_try_from_bytes;
-
-use crate::convert::chunked::partial_chunked_to_raw;
 
 pub mod build;
 mod request;
@@ -171,6 +171,13 @@ where
             self.remove_header_on_position(pos);
         }
         self.remove_header_on_key(WS_EXT);
+    }
+
+    pub fn decode(
+        &mut self,
+        buf: &mut BytesMut,
+    ) -> Result<(), MultiDecompressErrorReason> {
+        decompress(self, buf)
     }
 }
 
