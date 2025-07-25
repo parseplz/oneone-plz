@@ -26,6 +26,7 @@ where
     message_head: MessageHead<T>,
     body_headers: Option<BodyHeader>,
     body: Option<Body>,
+    extra_body: Option<BytesMut>,
 }
 
 impl<T> OneOne<T>
@@ -41,6 +42,7 @@ where
             message_head,
             body_headers,
             body: None,
+            extra_body: None,
         }
     }
 
