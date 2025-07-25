@@ -1,4 +1,5 @@
 use body_plz::variants::Body;
+use bytes::BytesMut;
 use decompression_plz::DecompressTrait;
 use header_plz::{HeaderMap, InfoLine, body_headers::BodyHeader};
 
@@ -10,6 +11,10 @@ where
 {
     fn get_body(&mut self) -> Body {
         self.body.take().unwrap()
+    }
+
+    fn get_extra_body(&mut self) -> Option<BytesMut> {
+        self.extra_body.take()
     }
 
     fn set_body(&mut self, body: Body) {
