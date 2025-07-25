@@ -3,14 +3,15 @@ use bytes::BytesMut;
 use header_plz::{
     Header, InfoLine,
     body_headers::{BodyHeader, parse::ParseBodyHeaders},
-    const_headers::{CONNECTION, KEEP_ALIVE, PROXY_CONNECTION, TRAILER},
+    const_headers::{
+        CLOSE, CONNECTION, KEEP_ALIVE, PROXY_CONNECTION, TRAILER, WS_EXT,
+    },
     error::HeaderReadError,
     message_head::MessageHead,
 };
 use protocol_traits_plz::Frame;
 mod impl_decompress;
 pub mod impl_try_from_bytes;
-pub mod impl_try_from_state;
 
 use crate::convert::chunked::partial_chunked_to_raw;
 
@@ -144,6 +145,10 @@ where
         self.body.as_mut()
     }
 
+    pub fn set_extra_body(&mut self, extra_body: BytesMut) {
+        self.extra_body = Some(extra_body);
+    }
+
     // checkers
     pub fn has_connection_keep_alive(&self) -> Option<usize> {
         self.message_head
@@ -155,6 +160,17 @@ where
         self.message_head
             .header_map()
             .header_key_position(PROXY_CONNECTION)
+    }
+
+    // Normalize
+    pub fn normalize(&mut self) {
+        if let Some(pos) = self.has_connection_keep_alive() {
+            self.update_header_value_on_position(pos, CLOSE);
+        }
+        if let Some(pos) = self.has_proxy_connection() {
+            self.remove_header_on_position(pos);
+        }
+        self.remove_header_on_key(WS_EXT);
     }
 }
 

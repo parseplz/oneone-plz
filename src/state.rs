@@ -17,8 +17,8 @@ use header_plz::{
 use protocol_traits_plz::Step;
 
 use crate::{
-    error::HttpStateError,
-    oneone::{OneOne, impl_try_from_state::MessageFramingError},
+    error::{HttpStateError, MessageFramingError},
+    oneone::OneOne,
 };
 
 #[cfg_attr(test, derive(PartialEq, Eq))]
@@ -247,8 +247,21 @@ where
     }
 
     fn try_into_frame(self) -> Result<OneOne<T>, MessageFramingError> {
-        let mut buf = BytesMut::with_capacity(65535);
-        OneOne::<T>::try_from((self, &mut buf))
+        let mut one = match self {
+            State::End(one) => one,
+            State::ReadBodyContentLengthExtraEnd(mut one, extra)
+            | State::ReadBodyChunkedExtraEnd(mut one, extra) => {
+                one.set_extra_body(extra);
+                one
+            }
+            _ => {
+                return Err(MessageFramingError::IncorrectState(
+                    self.to_string(),
+                ));
+            }
+        };
+        one.normalize();
+        Ok(one)
     }
 }
 

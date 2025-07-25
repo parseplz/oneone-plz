@@ -68,3 +68,9 @@ where
         }
     }
 }
+
+#[derive(Debug, Error)]
+pub enum MessageFramingError {
+    #[error("incorrect state| {0}")]
+    IncorrectState(String),
+}

@@ -106,9 +106,9 @@ dependencies = [
 
 [[package]]
 name = "decompression-plz"
-version = "0.0.3"
+version = "0.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a23622cd8f1e90ac81b14ed5a05c81acc0cafbab11c97a3b5dcb424b15569526"
+checksum = "f48c4482a7360b252f045049e0d3e295a3f8671716721c871b0782d0ff5bb562"
 dependencies = [
  "body-plz",
  "brotli",
