@@ -218,9 +218,12 @@ where
                 oneone.set_body(Body::Raw(buf.into_inner()));
                 Ok(State::End(oneone))
             }
-            (State::End(oneone), event) => {
+            (State::End(mut oneone), event) => {
                 self = match oneone.body() {
-                    None => State::ReadBodyClose(oneone),
+                    None => {
+                        oneone.set_transfer_type_close();
+                        State::ReadBodyClose(oneone)
+                    }
                     Some(Body::Raw(_)) => {
                         State::ReadBodyContentLengthExtra(oneone)
                     }
