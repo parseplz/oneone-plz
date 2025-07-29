@@ -25,7 +25,7 @@ use crate::{
 #[derive(Debug)]
 pub enum State<T>
 where
-    T: InfoLine,
+    T: InfoLine + std::fmt::Debug,
 {
     ReadMessageHead,
     ReadBodyContentLength(OneOne<T>, usize),
@@ -40,7 +40,7 @@ where
 
 impl<T> State<T>
 where
-    T: InfoLine,
+    T: InfoLine + std::fmt::Debug,
     MessageHead<T>: ParseBodyHeaders,
 {
     #[allow(clippy::new_without_default)]
@@ -93,7 +93,7 @@ where
 
 impl<T> Step<OneOne<T>> for State<T>
 where
-    T: InfoLine,
+    T: InfoLine + std::fmt::Debug,
     MessageHead<T>: ParseBodyHeaders,
 {
     type StateError = HttpStateError<T>;
@@ -267,7 +267,7 @@ where
 
 impl<T> Display for State<T>
 where
-    T: InfoLine,
+    T: InfoLine + std::fmt::Debug,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {

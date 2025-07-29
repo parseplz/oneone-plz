@@ -9,10 +9,10 @@ edition = "2024"
 
 [dependencies]
 # primitives
-body-plz = "0.0.30"
+body-plz = "0.0.31"
 buffer-plz = "0.0.3"
-decompression-plz = "0.0.5"
-header-plz = "0.0.25"
+decompression-plz = "0.0.6"
+header-plz = "0.0.26"
 protocol-traits-plz = "0.0.4"
 
 # basic 

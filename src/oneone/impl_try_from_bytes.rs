@@ -30,7 +30,7 @@ use crate::oneone::{OneOne, build::error::BuildMessageError};
 
 impl<T> TryFrom<BytesMut> for OneOne<T>
 where
-    T: InfoLine,
+    T: InfoLine + std::fmt::Debug,
     MessageHead<T>: ParseBodyHeaders,
 {
     type Error = BuildMessageError;

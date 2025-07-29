@@ -19,7 +19,8 @@ pub mod build;
 mod request;
 mod response;
 
-#[cfg_attr(any(test, debug_assertions), derive(Debug, PartialEq, Eq))]
+#[cfg_attr(any(test, debug_assertions), derive(PartialEq, Eq))]
+#[derive(Debug)]
 pub struct OneOne<T>
 where
     T: InfoLine,
@@ -32,7 +33,7 @@ where
 
 impl<T> OneOne<T>
 where
-    T: InfoLine,
+    T: InfoLine + std::fmt::Debug,
     MessageHead<T>: ParseBodyHeaders,
 {
     pub fn new(
