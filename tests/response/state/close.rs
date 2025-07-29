@@ -25,9 +25,11 @@ fn test_response_state_close_body() {
 fn test_response_state_close_body_multiple() {
     let chunks: &[&[u8]] =
         &[b"HTTP/1.1 200 OK\r\n\r\n", b"hello world ", b"more data"];
-    let response = poll_oneone_multiple::<Response>(chunks);
     let verify = "HTTP/1.1 200 OK\r\n\
                   Content-Length: 21\r\n\r\n\
                   hello world more data";
-    assert_eq!(response.into_bytes(), verify);
+    let mut result = poll_oneone_multiple::<Response>(chunks);
+    let mut buf = BytesMut::new();
+    result.decode(&mut buf).unwrap();
+    assert_eq!(result.into_bytes(), verify);
 }
