@@ -106,9 +106,9 @@ dependencies = [
 
 [[package]]
 name = "decompression-plz"
-version = "0.0.6"
+version = "0.0.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c61f925c3cd391d671c2823a73a397acea52add05e3b2ebb24891fc7dbfa54be"
+checksum = "62acb72850385f2cf05877dc63dceba6eefd1548b764e2913a67379481b73ec9"
 dependencies = [
  "body-plz",
  "brotli",
@@ -238,12 +238,15 @@ name = "oneone-plz"
 version = "0.0.5"
 dependencies = [
  "body-plz",
+ "brotli",
  "buffer-plz",
  "bytes",
  "decompression-plz",
+ "flate2",
  "header-plz",
  "protocol-traits-plz",
  "thiserror",
+ "zstd",
 ]
 
 [[package]]

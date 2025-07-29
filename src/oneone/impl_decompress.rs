@@ -21,8 +21,12 @@ where
         self.body = Some(body);
     }
 
-    fn body_headers_as_mut(&mut self) -> &mut Option<BodyHeader> {
-        &mut self.body_headers
+    fn body_headers(&self) -> Option<&BodyHeader> {
+        self.body_headers.as_ref()
+    }
+
+    fn body_headers_as_mut(&mut self) -> Option<&mut BodyHeader> {
+        self.body_headers.as_mut()
     }
 
     fn header_map(&self) -> &HeaderMap {
