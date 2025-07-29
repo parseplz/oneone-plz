@@ -75,13 +75,6 @@ where
             .add_header(header);
     }
 
-    pub fn append_headers(&mut self, mut headers: Vec<Header>) {
-        self.message_head
-            .header_map_as_mut()
-            .headers_as_mut()
-            .append(&mut headers);
-    }
-
     pub fn update_header_value_on_position(
         &mut self,
         pos: usize,
@@ -112,18 +105,6 @@ where
         self.message_head
             .header_map_as_mut()
             .remove_header_on_key(key)
-    }
-
-    pub fn truncate_header_value_on_position<E>(
-        &mut self,
-        pos: usize,
-        truncate_at: E,
-    ) where
-        E: AsRef<str>,
-    {
-        self.message_head
-            .header_map_as_mut()
-            .truncate_header_value_on_position(pos, truncate_at);
     }
 
     pub fn has_trailers(&self) -> bool {
