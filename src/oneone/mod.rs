@@ -2,6 +2,7 @@ use body_plz::variants::{Body, chunked::ChunkType};
 use bytes::BytesMut;
 use decompression_plz::MultiDecompressErrorReason;
 use decompression_plz::decompress;
+use header_plz::body_headers::transfer_types::TransferType;
 use header_plz::{
     Header, InfoLine,
     body_headers::{BodyHeader, parse::ParseBodyHeaders},
@@ -112,6 +113,21 @@ where
             .header_map()
             .header_key_position(TRAILER)
             .is_some()
+    }
+
+    pub fn set_transfer_type_close(&mut self) {
+        self.body_headers
+            .get_or_insert_with(Default::default)
+            .transfer_type = Some(TransferType::Close);
+        //if let Some(bh) = self.body_headers.as_mut() {
+        //    bh.transfer_type = Some(TransferType::Close);
+        //} else {
+        //    let bh = BodyHeader {
+        //        transfer_type: Some(TransferType::Close),
+        //        ..Default::default()
+        //    };
+        //    self.body_headers = Some(bh);
+        //}
     }
 
     // Body Headers Related
