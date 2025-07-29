@@ -1,6 +1,6 @@
 #![allow(warnings)]
-// mod request;
-//mod response;
+mod request;
+mod response;
 
 use buffer_plz::{Cursor, Event};
 use bytes::BytesMut;

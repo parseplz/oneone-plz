@@ -11,15 +11,16 @@ fn test_response_state_chunked_extra_single() {
                  0\r\n\r\n\
                  extra data";
 
-    let result = poll_state_result_with_end::<Response>(input.as_bytes())
-        .unwrap()
-        .try_into_frame()
-        .unwrap()
-        .into_bytes();
     let verify = "HTTP/1.1 200 OK\r\n\
                   Content-Length: 22\r\n\r\n\
                   hello world extra data";
-    assert_eq!(result, verify);
+    let mut result = poll_state_result_with_end::<Response>(input.as_bytes())
+        .unwrap()
+        .try_into_frame()
+        .unwrap();
+    let mut buf = BytesMut::new();
+    result.decode(&mut buf).unwrap();
+    assert_eq!(result.into_bytes(), verify);
 }
 
 #[test]
@@ -32,10 +33,12 @@ fn test_response_state_chunked_extra_multiple() {
         b"added",
     ];
 
-    let result = poll_oneone_multiple::<Response>(chunks);
     let verify = "HTTP/1.1 200 OK\r\n\
                   Content-Length: 22\r\n\r\n\
                   hello extra data added";
+    let mut result = poll_oneone_multiple::<Response>(chunks);
+    let mut buf = BytesMut::new();
+    result.decode(&mut buf).unwrap();
     assert_eq!(result.into_bytes(), verify);
 }
 
@@ -53,14 +56,17 @@ fn test_response_state_chunked_extra_finished_single() {
 
     cbuf.as_mut()
         .extend_from_slice(b"extra data added");
-    let result = state
+    let verify = "HTTP/1.1 200 OK\r\n\
+                  Content-Length: 22\r\n\r\n\
+                  hello extra data added";
+
+    let mut result = state
         .try_next(Event::End(&mut cbuf))
         .unwrap()
         .try_into_frame()
         .unwrap();
-    let verify = "HTTP/1.1 200 OK\r\n\
-                  Content-Length: 22\r\n\r\n\
-                  hello extra data added";
+    let mut buf = BytesMut::new();
+    result.decode(&mut buf).unwrap();
     assert_eq!(result.into_bytes(), verify);
 }
 
@@ -91,9 +97,11 @@ fn test_response_state_chunked_extra_finished_multiple() {
         .try_next(Event::End(&mut cbuf))
         .unwrap();
 
-    let result = state.try_into_frame().unwrap();
     let verify = "HTTP/1.1 200 OK\r\n\
                   Content-Length: 22\r\n\r\n\
                   hello extra data added";
+    let mut result = state.try_into_frame().unwrap();
+    let mut buf = BytesMut::new();
+    result.decode(&mut buf).unwrap();
     assert_eq!(result.into_bytes(), verify);
 }

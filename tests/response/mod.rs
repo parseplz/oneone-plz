@@ -6,9 +6,6 @@ use oneone_plz::state::State;
 use protocol_traits_plz::Frame;
 use protocol_traits_plz::Step;
 
-// TODO
-// mod convert;
+mod convert;
 mod oneone;
 mod state;
-
-// FIX: corrupt deflate stream
