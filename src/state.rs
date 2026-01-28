@@ -11,21 +11,18 @@ use body_plz::{
 use buffer_plz::Event;
 use bytes::BytesMut;
 use header_plz::{
+    OneHeader, OneInfoLine,
     body_headers::{parse::ParseBodyHeaders, transfer_types::TransferType},
-    message_head::{MessageHead, info_line::InfoLine},
+    message_head::MessageHead,
 };
-use protocol_traits_plz::Step;
+use http_plz::OneOne;
 
-use crate::{
-    error::{HttpStateError, MessageFramingError},
-    oneone::OneOne,
-};
+use crate::error::{HttpStateError, MessageFramingError};
 
-#[cfg_attr(test, derive(PartialEq, Eq))]
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum State<T>
 where
-    T: InfoLine + std::fmt::Debug,
+    T: OneInfoLine + std::fmt::Debug,
 {
     ReadMessageHead,
     ReadBodyContentLength(OneOne<T>, usize),
@@ -40,8 +37,8 @@ where
 
 impl<T> State<T>
 where
-    T: InfoLine + std::fmt::Debug,
-    MessageHead<T>: ParseBodyHeaders,
+    T: OneInfoLine + std::fmt::Debug,
+    MessageHead<T, OneHeader>: ParseBodyHeaders,
 {
     #[allow(clippy::new_without_default)]
     pub fn new() -> State<T> {
@@ -91,15 +88,23 @@ where
     }
 }
 
-impl<T> Step<OneOne<T>> for State<T>
-where
-    T: InfoLine + std::fmt::Debug,
-    MessageHead<T>: ParseBodyHeaders,
-{
-    type StateError = HttpStateError<T>;
-    type FrameError = MessageFramingError;
+//impl<T> Step<OneOne<T>> for State<T>
+//where
+//    T: OneInfoLine + std::fmt::Debug,
+//    MessageHead<T, OneHeader>: ParseBodyHeaders,
+//{
+//    type StateError = HttpStateError<T>;
+//    type FrameError = MessageFramingError;
 
-    fn try_next(mut self, event: Event) -> Result<Self, Self::StateError> {
+impl<T> State<T>
+where
+    T: OneInfoLine + std::fmt::Debug,
+    MessageHead<T, OneHeader>: ParseBodyHeaders,
+{
+    pub fn try_next(
+        mut self,
+        event: Event,
+    ) -> Result<Self, HttpStateError<T>> {
         match (self, event) {
             (State::ReadMessageHead, Event::Read(buf)) => {
                 match MessageHead::is_complete(buf) {
@@ -146,8 +151,8 @@ where
                             }
                             Event::End(buf) => {
                                 Err(HttpStateError::ContentLengthPartial(
-                                    oneone,
-                                    buf.split_at_current_pos(),
+                                    (oneone, buf.split_at_current_pos())
+                                        .into(),
                                 ))?
                             }
                         },
@@ -201,9 +206,11 @@ where
                     }
                 }
             },
-            (State::ReadBodyChunked(oneone, _), Event::End(buf)) => Err(
-                HttpStateError::ChunkReaderPartial(oneone, buf.into_inner()),
-            ),
+            (State::ReadBodyChunked(oneone, _), Event::End(buf)) => {
+                Err(HttpStateError::ChunkReaderPartial(
+                    (oneone, buf.into_inner()).into(),
+                ))
+            }
             (State::ReadBodyChunkedExtra(oneone), Event::Read(_)) => {
                 Ok(State::ReadBodyChunkedExtra(oneone))
             }
@@ -243,13 +250,13 @@ where
         }
     }
 
-    fn is_ended(&self) -> bool {
+    pub fn is_ended(&self) -> bool {
         matches!(self, Self::End(_))
             | matches!(self, State::ReadBodyContentLengthExtraEnd(..))
             | matches!(self, State::ReadBodyChunkedExtraEnd(..))
     }
 
-    fn try_into_frame(self) -> Result<OneOne<T>, MessageFramingError> {
+    pub fn try_into_frame(self) -> Result<OneOne<T>, MessageFramingError> {
         let mut one = match self {
             State::End(one) => one,
             State::ReadBodyContentLengthExtraEnd(mut one, extra)
@@ -270,7 +277,7 @@ where
 
 impl<T> Display for State<T>
 where
-    T: InfoLine + std::fmt::Debug,
+    T: OneInfoLine + std::fmt::Debug,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
