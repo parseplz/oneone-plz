@@ -48,6 +48,10 @@ where
     }
 }
 
+#[derive(Debug, Error, Default)]
+#[error("incorrect state| {0}")]
+pub struct IncorrectState(pub(crate) String);
+
 impl<T> TryFrom<HttpStateError<T>> for OneOne<T>
 where
     T: OneInfoLine,
@@ -67,10 +71,4 @@ where
             _ => Err(value),
         }
     }
-}
-
-#[derive(Debug, Error)]
-pub enum MessageFramingError {
-    #[error("incorrect state| {0}")]
-    IncorrectState(String),
 }
