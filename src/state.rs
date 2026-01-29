@@ -17,7 +17,7 @@ use header_plz::{
 };
 use http_plz::OneOne;
 
-use crate::error::{HttpStateError, MessageFramingError};
+use crate::error::{HttpStateError, IncorrectState};
 
 #[derive(Debug, PartialEq)]
 pub enum State<T>
@@ -105,8 +105,9 @@ where
         mut self,
         event: Event,
     ) -> Result<Self, HttpStateError<T>> {
+        use State::*;
         match (self, event) {
-            (State::ReadMessageHead, Event::Read(buf)) => {
+            (ReadMessageHead, Event::Read(buf)) => {
                 match MessageHead::is_complete(buf) {
                     true => {
                         let raw_headers = buf.split_at_current_pos();
@@ -119,55 +120,54 @@ where
                     false => Ok(Self::ReadMessageHead),
                 }
             }
-            (State::ReadMessageHead, Event::End(buf)) => {
+            (ReadMessageHead, Event::End(buf)) => {
                 Err(HttpStateError::Unparsed(buf.into_inner()))?
             }
-            (
-                State::ReadBodyContentLength(mut oneone, mut size),
-                mut event,
-            ) => match event {
-                Event::Read(ref mut buf) | Event::End(ref mut buf) => {
-                    match read_content_length(buf, &mut size) {
-                        true => {
-                            oneone.set_body(Body::Raw(
-                                buf.split_at_current_pos(),
-                            ));
-                            if buf.len() > 0 {
-                                let next_state =
-                                    State::ReadBodyContentLengthExtra(oneone);
-                                match event {
-                                    Event::Read(_) => Ok(next_state),
-                                    Event::End(_) => {
-                                        next_state.try_next(event)
+            (ReadBodyContentLength(mut oneone, mut size), mut event) => {
+                match event {
+                    Event::Read(ref mut buf) | Event::End(ref mut buf) => {
+                        match read_content_length(buf, &mut size) {
+                            true => {
+                                oneone.set_body(Body::Raw(
+                                    buf.split_at_current_pos(),
+                                ));
+                                if buf.len() > 0 {
+                                    let next_state =
+                                        ReadBodyContentLengthExtra(oneone);
+                                    match event {
+                                        Event::Read(_) => Ok(next_state),
+                                        Event::End(_) => {
+                                            next_state.try_next(event)
+                                        }
                                     }
+                                } else {
+                                    Ok(End(oneone))
                                 }
-                            } else {
-                                Ok(State::End(oneone))
                             }
+                            false => match event {
+                                Event::Read(_) => {
+                                    Ok(ReadBodyContentLength(oneone, size))
+                                }
+                                Event::End(buf) => {
+                                    Err(HttpStateError::ContentLengthPartial(
+                                        (oneone, buf.split_at_current_pos())
+                                            .into(),
+                                    ))?
+                                }
+                            },
                         }
-                        false => match event {
-                            Event::Read(_) => {
-                                Ok(State::ReadBodyContentLength(oneone, size))
-                            }
-                            Event::End(buf) => {
-                                Err(HttpStateError::ContentLengthPartial(
-                                    (oneone, buf.split_at_current_pos())
-                                        .into(),
-                                ))?
-                            }
-                        },
                     }
                 }
-            },
-            (State::ReadBodyContentLengthExtra(oneone), Event::Read(_)) => {
-                Ok(State::ReadBodyContentLengthExtra(oneone))
             }
-            (State::ReadBodyContentLengthExtra(oneone), Event::End(buf)) => {
+            (ReadBodyContentLengthExtra(oneone), Event::Read(_)) => {
+                Ok(ReadBodyContentLengthExtra(oneone))
+            }
+            (ReadBodyContentLengthExtra(oneone), Event::End(buf)) => {
                 let extra_body = buf.into_inner();
-                Ok(State::ReadBodyContentLengthExtraEnd(oneone, extra_body))
+                Ok(ReadBodyContentLengthExtraEnd(oneone, extra_body))
             }
             (
-                State::ReadBodyChunked(mut oneone, mut chunk_state),
+                ReadBodyChunked(mut oneone, mut chunk_state),
                 Event::Read(buf),
             ) => loop {
                 match chunk_state.next(buf) {
@@ -189,7 +189,7 @@ where
                                 return if buf.len() > 0 {
                                     Ok(State::ReadBodyChunkedExtra(oneone))
                                 } else {
-                                    Ok(State::End(oneone))
+                                    Ok(End(oneone))
                                 };
                             }
                             ChunkReaderState::Failed(e) => {
@@ -199,52 +199,45 @@ where
                         }
                     }
                     None => {
-                        return Ok(State::ReadBodyChunked(
-                            oneone,
-                            chunk_state,
-                        ));
+                        return Ok(ReadBodyChunked(oneone, chunk_state));
                     }
                 }
             },
-            (State::ReadBodyChunked(oneone, _), Event::End(buf)) => {
+            (ReadBodyChunked(oneone, _), Event::End(buf)) => {
                 Err(HttpStateError::ChunkReaderPartial(
                     (oneone, buf.into_inner()).into(),
                 ))
             }
-            (State::ReadBodyChunkedExtra(oneone), Event::Read(_)) => {
-                Ok(State::ReadBodyChunkedExtra(oneone))
+            (ReadBodyChunkedExtra(oneone), Event::Read(_)) => {
+                Ok(ReadBodyChunkedExtra(oneone))
             }
-            (State::ReadBodyChunkedExtra(oneone), Event::End(buf)) => {
+            (ReadBodyChunkedExtra(oneone), Event::End(buf)) => {
                 let extra_body = buf.into_inner();
-                Ok(State::ReadBodyChunkedExtraEnd(oneone, extra_body))
+                Ok(ReadBodyChunkedExtraEnd(oneone, extra_body))
             }
-            (State::ReadBodyClose(oneone), Event::Read(_)) => {
+            (ReadBodyClose(oneone), Event::Read(_)) => {
                 Ok(Self::ReadBodyClose(oneone))
             }
-            (State::ReadBodyClose(mut oneone), Event::End(buf)) => {
+            (ReadBodyClose(mut oneone), Event::End(buf)) => {
                 oneone.set_body(Body::Raw(buf.into_inner()));
-                Ok(State::End(oneone))
+                Ok(End(oneone))
             }
-            (State::End(mut oneone), event) => {
+            (End(mut oneone), event) => {
                 self = match oneone.body() {
                     None => {
                         oneone.set_transfer_type_close();
-                        State::ReadBodyClose(oneone)
+                        ReadBodyClose(oneone)
                     }
-                    Some(Body::Raw(_)) => {
-                        State::ReadBodyContentLengthExtra(oneone)
-                    }
-                    Some(Body::Chunked(_)) => {
-                        State::ReadBodyChunkedExtra(oneone)
-                    }
+                    Some(Body::Raw(_)) => ReadBodyContentLengthExtra(oneone),
+                    Some(Body::Chunked(_)) => ReadBodyChunkedExtra(oneone),
                 };
                 match event {
                     Event::Read(_) => Ok(self),
                     Event::End(_) => self.try_next(event),
                 }
             }
-            (State::ReadBodyContentLengthExtraEnd(..), _)
-            | (State::ReadBodyChunkedExtraEnd(..), _) => {
+            (ReadBodyContentLengthExtraEnd(..), _)
+            | (ReadBodyChunkedExtraEnd(..), _) => {
                 unreachable!("not possible")
             }
         }
@@ -256,7 +249,7 @@ where
             | matches!(self, State::ReadBodyChunkedExtraEnd(..))
     }
 
-    pub fn try_into_frame(self) -> Result<OneOne<T>, MessageFramingError> {
+    pub fn try_into_frame(self) -> Result<OneOne<T>, IncorrectState> {
         let mut one = match self {
             State::End(one) => one,
             State::ReadBodyContentLengthExtraEnd(mut one, extra)
@@ -265,9 +258,7 @@ where
                 one
             }
             _ => {
-                return Err(MessageFramingError::IncorrectState(
-                    self.to_string(),
-                ));
+                return Err(IncorrectState(self.to_string()));
             }
         };
         one.normalize();
