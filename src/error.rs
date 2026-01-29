@@ -28,6 +28,28 @@ where
     ChunkReaderPartial(Box<(OneOne<T>, BytesMut)>),
 }
 
+impl<T> HttpStateError<T>
+where
+    T: OneInfoLine + std::fmt::Debug,
+    MessageHead<T, OneHeader>: ParseBodyHeaders,
+{
+    pub fn into_bytes(self) -> BytesMut {
+        BytesMut::from(self)
+    }
+
+    pub fn try_into_one(self) -> Result<OneOne<T>, HttpStateError<T>> {
+        OneOne::<T>::try_from(self)
+    }
+
+    pub fn is_partial(&self) -> bool {
+        matches!(self, Self::ContentLengthPartial(_))
+    }
+
+    pub fn is_unparsed(&self) -> bool {
+        matches!(self, Self::Unparsed(_))
+    }
+}
+
 impl<T> From<HttpStateError<T>> for BytesMut
 where
     T: OneInfoLine + std::fmt::Debug,
