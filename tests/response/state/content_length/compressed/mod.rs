@@ -4,7 +4,7 @@ use bytes::BufMut;
 use flate2::Compression;
 use std::io::{Read, Write};
 mod content_encoding;
-//mod transfer_encoding;
+mod transfer_encoding;
 
 pub fn compressed_data() -> BytesMut {
     let data = b"hello world";

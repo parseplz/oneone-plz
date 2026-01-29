@@ -1,3 +1,5 @@
+use http_plz::OneResponse;
+
 use super::*;
 
 #[test]
@@ -8,9 +10,10 @@ fn test_response_state_chunked_partial() {
                  hello \r\n\
                  5";
 
-    let result = poll_state_result_with_end::<Response>(input.as_bytes());
+    let result =
+        poll_state_result_with_end::<OneResponseLine>(input.as_bytes());
     if let Err(e) = result {
-        matches!(e, HttpStateError::ChunkReaderPartial(_, _));
+        matches!(e, HttpStateError::ChunkReaderPartial(_));
         assert_eq!(BytesMut::from(input.as_bytes()), BytesMut::from(e));
     } else {
         panic!()

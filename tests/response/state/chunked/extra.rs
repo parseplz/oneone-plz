@@ -14,12 +14,13 @@ fn test_response_state_chunked_extra_single() {
     let verify = "HTTP/1.1 200 OK\r\n\
                   Content-Length: 22\r\n\r\n\
                   hello world extra data";
-    let mut result = poll_state_result_with_end::<Response>(input.as_bytes())
-        .unwrap()
-        .try_into_frame()
-        .unwrap();
+    let mut result =
+        poll_state_result_with_end::<OneResponseLine>(input.as_bytes())
+            .unwrap()
+            .try_into_frame()
+            .unwrap();
     let mut buf = BytesMut::new();
-    result.decode(&mut buf).unwrap();
+    result.try_decompress(&mut buf).unwrap();
     assert_eq!(result.into_bytes(), verify);
 }
 
@@ -36,9 +37,9 @@ fn test_response_state_chunked_extra_multiple() {
     let verify = "HTTP/1.1 200 OK\r\n\
                   Content-Length: 22\r\n\r\n\
                   hello extra data added";
-    let mut result = poll_oneone_multiple::<Response>(chunks);
+    let mut result = poll_oneone_multiple::<OneResponseLine>(chunks);
     let mut buf = BytesMut::new();
-    result.decode(&mut buf).unwrap();
+    result.try_decompress(&mut buf).unwrap();
     assert_eq!(result.into_bytes(), verify);
 }
 
@@ -50,7 +51,8 @@ fn test_response_state_chunked_extra_finished_single() {
                  hello \r\n\
                  0\r\n\r\n";
 
-    let (mut buf, mut state) = poll_state_once::<Response>(input.as_bytes());
+    let (mut buf, mut state) =
+        poll_state_once::<OneResponseLine>(input.as_bytes());
     assert!(matches!(state, State::End(_)));
     let mut cbuf = Cursor::new(&mut buf);
 
@@ -66,7 +68,7 @@ fn test_response_state_chunked_extra_finished_single() {
         .try_into_frame()
         .unwrap();
     let mut buf = BytesMut::new();
-    result.decode(&mut buf).unwrap();
+    result.try_decompress(&mut buf).unwrap();
     assert_eq!(result.into_bytes(), verify);
 }
 
@@ -78,7 +80,8 @@ fn test_response_state_chunked_extra_finished_multiple() {
                  hello \r\n\
                  0\r\n\r\n";
 
-    let (mut buf, mut state) = poll_state_once::<Response>(input.as_bytes());
+    let (mut buf, mut state) =
+        poll_state_once::<OneResponseLine>(input.as_bytes());
     let mut cbuf = Cursor::new(&mut buf);
     assert!(matches!(state, State::End(_)));
 
@@ -102,6 +105,6 @@ fn test_response_state_chunked_extra_finished_multiple() {
                   hello extra data added";
     let mut result = state.try_into_frame().unwrap();
     let mut buf = BytesMut::new();
-    result.decode(&mut buf).unwrap();
+    result.try_decompress(&mut buf).unwrap();
     assert_eq!(result.into_bytes(), verify);
 }

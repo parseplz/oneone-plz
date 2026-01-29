@@ -4,17 +4,20 @@ mod response;
 
 use buffer_plz::{Cursor, Event};
 use bytes::BytesMut;
+use header_plz::{OneHeader, OneMessageHead};
 use header_plz::{
-    InfoLine, body_headers::parse::ParseBodyHeaders, message_head::MessageHead,
+    OneInfoLine, body_headers::parse::ParseBodyHeaders,
+    message_head::MessageHead,
 };
+use header_plz::{OneRequestLine, OneResponseLine};
+use http_plz::OneOne;
 use oneone_plz::error::HttpStateError;
-use oneone_plz::{oneone::OneOne, state::State};
-use protocol_traits_plz::Step;
+use oneone_plz::state::State;
 
 pub fn poll_state_once<T>(input: &[u8]) -> (BytesMut, State<T>)
 where
-    T: InfoLine + std::fmt::Debug,
-    MessageHead<T>: ParseBodyHeaders,
+    T: OneInfoLine + std::fmt::Debug,
+    OneMessageHead<T>: ParseBodyHeaders,
 {
     let mut buf = BytesMut::from(input);
     let mut cbuf = Cursor::new(&mut buf);
@@ -30,8 +33,8 @@ pub fn poll_state_result_with_end<T>(
     input: &[u8],
 ) -> Result<State<T>, HttpStateError<T>>
 where
-    T: InfoLine + std::fmt::Debug,
-    MessageHead<T>: ParseBodyHeaders,
+    T: OneInfoLine + std::fmt::Debug,
+    OneMessageHead<T>: ParseBodyHeaders,
 {
     let (mut buf, state) = poll_state_once(input);
     let mut cbuf = Cursor::new(&mut buf);
@@ -40,8 +43,8 @@ where
 
 pub fn poll_oneone_only_read<T>(input: &[u8]) -> OneOne<T>
 where
-    T: InfoLine + std::fmt::Debug,
-    MessageHead<T>: ParseBodyHeaders,
+    T: OneInfoLine + std::fmt::Debug,
+    OneMessageHead<T>: ParseBodyHeaders,
 {
     let (_, state) = poll_state_once(input);
     assert!(matches!(state, State::End(_)));
@@ -50,8 +53,8 @@ where
 
 pub fn poll_oneone_multiple<T>(input: &[&[u8]]) -> OneOne<T>
 where
-    T: InfoLine + std::fmt::Debug,
-    MessageHead<T>: ParseBodyHeaders,
+    T: OneInfoLine + std::fmt::Debug,
+    OneMessageHead<T>: ParseBodyHeaders,
 {
     let (mut buf, mut state) = poll_state_once(input[0]);
     let mut cbuf = Cursor::new(&mut buf);

@@ -9,14 +9,16 @@ fn test_response_state_content_length_extra() {
                   Content-Length: 21\r\n\r\n\
                   hello world more data";
 
-    let mut response: OneOne<Response> =
+    let mut response: OneOne<OneResponseLine> =
         poll_state_result_with_end(input.as_bytes())
             .unwrap()
             .try_into_frame()
             .unwrap();
 
     let mut buf = BytesMut::new();
-    response.decode(&mut buf).unwrap();
+    response
+        .try_decompress(&mut buf)
+        .unwrap();
 
     assert_eq!(response.into_bytes(), verify);
 }
@@ -30,9 +32,11 @@ fn test_response_state_content_length_extra_multiple() {
     let verify = "HTTP/1.1 200 OK\r\n\
                   Content-Length: 21\r\n\r\n\
                   hello world more data";
-    let mut response = poll_oneone_multiple::<Response>(chunks);
+    let mut response = poll_oneone_multiple::<OneResponseLine>(chunks);
     let mut buf = BytesMut::new();
-    response.decode(&mut buf).unwrap();
+    response
+        .try_decompress(&mut buf)
+        .unwrap();
     assert_eq!(response.into_bytes(), verify);
 }
 
@@ -46,9 +50,11 @@ fn test_response_state_content_length_extra_finished_end_single() {
                   Content-Length: 27\r\n\r\n\
                   hello world more data added";
 
-    let mut response = poll_oneone_multiple::<Response>(chunks);
+    let mut response = poll_oneone_multiple::<OneResponseLine>(chunks);
     let mut buf = BytesMut::new();
-    response.decode(&mut buf).unwrap();
+    response
+        .try_decompress(&mut buf)
+        .unwrap();
     assert_eq!(response.into_bytes(), verify);
 }
 
@@ -62,8 +68,10 @@ fn test_response_state_content_length_extra_finished_read_end_multiple() {
     let verify = "HTTP/1.1 200 OK\r\n\
                   Content-Length: 27\r\n\r\n\
                   hello world more data added";
-    let mut response = poll_oneone_multiple::<Response>(chunks);
+    let mut response = poll_oneone_multiple::<OneResponseLine>(chunks);
     let mut buf = BytesMut::new();
-    response.decode(&mut buf).unwrap();
+    response
+        .try_decompress(&mut buf)
+        .unwrap();
     assert_eq!(response.into_bytes(), verify);
 }
