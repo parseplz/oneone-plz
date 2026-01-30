@@ -9,10 +9,10 @@ edition = "2024"
 
 [dependencies]
 # primitives
-body-plz = "0.0.41"
+body-plz = "0.0.43"
 buffer-plz = "0.0.3"
-decompression-plz = "0.0.18"
-header-plz = "0.0.37"
+decompression-plz = "0.0.21"
+header-plz = "0.0.39"
 http-plz = { git = "https://github.com/parseplz/http-plz" }
 
 # basic 
