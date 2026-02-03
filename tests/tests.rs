@@ -1,4 +1,4 @@
-#![allow(warnings)]
+#![allow(warnings, clippy::unwrap_used)]
 mod request;
 mod response;
 

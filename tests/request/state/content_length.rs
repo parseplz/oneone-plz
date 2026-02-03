@@ -1,3 +1,5 @@
+use header_plz::Method;
+
 use super::*;
 
 #[test]
@@ -7,7 +9,7 @@ fn test_request_state_post_success() {
                  content-length: 7\r\n\r\n\
                  Mozilla";
     let result = poll_oneone_only_read::<OneRequestLine>(input.as_bytes());
-    assert_eq!(result.method_as_string(), "POST");
+    assert_eq!(result.method_enum(), Method::POST);
     assert_eq!(result.uri_as_string(), "/echo");
 }
 

@@ -1,3 +1,5 @@
+use header_plz::Method;
+
 use super::*;
 
 #[test]
@@ -10,7 +12,7 @@ fn test_request_state_get_success() {
         result
             .message_head()
             .infoline()
-            .method(),
-        b"GET"
+            .method_enum(),
+        Method::GET
     );
 }
