@@ -88,14 +88,6 @@ where
     }
 }
 
-//impl<T> Step<OneOne<T>> for State<T>
-//where
-//    T: OneInfoLine + std::fmt::Debug,
-//    MessageHead<T, OneHeader>: ParseBodyHeaders,
-//{
-//    type StateError = HttpStateError<T>;
-//    type FrameError = MessageFramingError;
-
 impl<T> State<T>
 where
     T: OneInfoLine + std::fmt::Debug,
@@ -174,7 +166,7 @@ where
                     Some(chunk_to_add) => {
                         oneone
                             .body_as_mut()
-                            .unwrap()
+                            .expect("no chunked body")
                             .push_chunk(chunk_to_add);
                         match chunk_state {
                             ChunkReaderState::LastChunk => {
@@ -250,7 +242,7 @@ where
     }
 
     pub fn try_into_frame(self) -> Result<OneOne<T>, IncorrectState> {
-        let mut one = match self {
+        let one = match self {
             State::End(one) => one,
             State::ReadBodyContentLengthExtraEnd(mut one, extra)
             | State::ReadBodyChunkedExtraEnd(mut one, extra) => {
