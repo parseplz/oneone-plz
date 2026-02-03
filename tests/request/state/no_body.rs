@@ -11,7 +11,7 @@ fn test_request_state_get_success() {
     assert_eq!(
         result
             .message_head()
-            .infoline()
+            .info_line()
             .method_enum(),
         Method::GET
     );
