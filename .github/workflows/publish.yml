@@ -5,10 +5,11 @@ on:
       - 'v[0-9]+.[0-9]+.[0-9]+*'
 
 jobs:
-  tests:
+  checks:
     uses: ./.github/workflows/check.yml
 
   publish:
+    needs: checks
     if: github.repository == 'parseplz/oneone-plz'
     runs-on: ubuntu-latest
     timeout-minutes: 5
