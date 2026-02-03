@@ -261,7 +261,6 @@ where
                 return Err(IncorrectState(self.to_string()));
             }
         };
-        one.normalize();
         Ok(one)
     }
 }
