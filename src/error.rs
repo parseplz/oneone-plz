@@ -5,7 +5,7 @@ use decompression_plz::{
 };
 use header_plz::{
     OneHeader, OneInfoLine, body_headers::parse::ParseBodyHeaders,
-    error::HeaderReadError, message_head::MessageHead,
+    error::MessageHeadError, message_head::MessageHead,
 };
 use http_plz::OneOne;
 use thiserror::Error;
@@ -16,7 +16,7 @@ where
     T: OneInfoLine,
 {
     #[error("header read| {0}")]
-    InfoLine(#[from] HeaderReadError),
+    InfoLine(#[from] MessageHeadError),
     #[error("chunkreader| {0}")]
     ChunkState(#[from] ChunkReaderError),
     // Partial
