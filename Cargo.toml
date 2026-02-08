@@ -9,11 +9,11 @@ edition = "2024"
 
 [dependencies]
 # primitives
-body-plz = "0.0.47"
+body-plz = "0.0.48"
 buffer-plz = "0.0.3"
-decompression-plz = "0.0.24"
-header-plz = "0.0.43"
-http-plz = "0.0.3"
+decompression-plz = "0.0.25"
+header-plz = "0.0.44"
+http-plz = "0.0.4"
 
 # basic 
 bytes = "1.11.1"
