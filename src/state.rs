@@ -8,7 +8,7 @@ use body_plz::{
     },
     variants::Body,
 };
-use buffer_plz::Event;
+use buffer_plz::{Cursor, Event};
 use bytes::BytesMut;
 use header_plz::{
     OneHeader, OneInfoLine,
@@ -62,7 +62,10 @@ where
      */
 
     #[allow(clippy::result_large_err)]
-    fn build_oneone(headers: BytesMut) -> Result<Self, HttpStateError<T>> {
+    fn build_oneone(
+        headers: BytesMut,
+        buf: &mut Cursor,
+    ) -> Result<Self, HttpStateError<T>> {
         let mut one = OneOne::try_from_message_head_buf(headers)?;
         let next_state = match one.body_headers() {
             None => Self::End(one),
@@ -72,6 +75,7 @@ where
                         if size == 0 {
                             Self::End(one)
                         } else {
+                            buf.as_mut().reserve(size);
                             Self::ReadBodyContentLength(one, size)
                         }
                     }
@@ -103,7 +107,7 @@ where
                 match MessageHead::is_complete(buf) {
                     true => {
                         let raw_headers = buf.split_at_current_pos();
-                        self = State::build_oneone(raw_headers)?;
+                        self = State::build_oneone(raw_headers, buf)?;
                         if buf.len() > 0 {
                             self = self.try_next(Event::Read(buf))?;
                         }
