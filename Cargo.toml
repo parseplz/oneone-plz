@@ -13,7 +13,7 @@ body-plz = "0.0.52"
 buffer-plz = "0.0.3"
 decompression-plz = "0.0.29"
 header-plz = "0.0.47"
-http-plz = "0.0.7"
+http-plz = "0.0.8"
 
 # basic 
 bytes = "1.11.1"
