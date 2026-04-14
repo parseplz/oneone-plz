@@ -218,9 +218,9 @@ dependencies = [
 
 [[package]]
 name = "http-plz"
-version = "0.0.7"
+version = "0.0.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ad44abaa5356f763128a88ab4d43ceed634673b27ff12ac6f526fc55a836dc67"
+checksum = "469056b3a08b8ff1a8995dfb271d77dc3082598cdd2900bc7ba0b7eea8c396ff"
 dependencies = [
  "body-plz",
  "bon",
@@ -299,7 +299,7 @@ checksum = "42f5e15c9953c5e4ccceeb2e7382a716482c34515315f7b03532b8b4e8393d2d"
 
 [[package]]
 name = "oneone-plz"
-version = "0.0.10"
+version = "0.0.11"
 dependencies = [
  "body-plz",
  "brotli",
