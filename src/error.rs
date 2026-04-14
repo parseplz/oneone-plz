@@ -4,8 +4,9 @@ use decompression_plz::{
     DecompressTrait, content_length::update_content_length,
 };
 use header_plz::{
-    OneHeader, OneInfoLine, body_headers::parse::ParseBodyHeaders,
-    error::MessageHeadError, message_head::MessageHead,
+    OneHeader, OneInfoLine,
+    body_headers::parse::ParseBodyHeaders,
+    message_head::{MessageHead, error::MessageHeadError},
 };
 use http_plz::OneOne;
 use thiserror::Error;

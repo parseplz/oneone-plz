@@ -40,26 +40,25 @@ fn test_request_try_from_state_incorrect_state() {
 }
 
 #[test]
-fn test_request_try_from_state_remove_proxy_header() {
+fn test_request_try_from_state_full() {
     let input = "GET / HTTP/1.1\r\n\
                  Host: example.com\r\n\
                  Proxy-Connection: keep-alive\r\n\r\n";
     let mut result = poll_oneone_only_read::<OneRequestLine>(input.as_bytes());
-    result.normalize();
     let verify = "GET / HTTP/1.1\r\n\
-                  Host: example.com\r\n\r\n";
+                  Host: example.com\r\n\
+                  Proxy-Connection: keep-alive\r\n\r\n";
     assert_eq!(result.into_bytes(), verify);
 }
 
 #[test]
-fn test_request_try_from_state_modify_connection_header() {
+fn test_request_try_from_state_full_2() {
     let input = "GET / HTTP/1.1\r\n\
                  Host: example.com\r\n\
                  Connection: keep-alive\r\n\r\n";
     let mut result = poll_oneone_only_read::<OneRequestLine>(input.as_bytes());
-    result.normalize();
     let verify = "GET / HTTP/1.1\r\n\
                   Host: example.com\r\n\
-                  Connection: close\r\n\r\n";
+                  Connection: keep-alive\r\n\r\n";
     assert_eq!(result.into_bytes(), verify);
 }
