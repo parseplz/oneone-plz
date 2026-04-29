@@ -7,7 +7,7 @@ fn test_response_state_cl_decompress_ce_complete_brotli() {
                 Content-Encoding: br\r\n\r\n\
                 \x0b\x05\x80\x68\x65\x6c\x6c\x6f\x20\x77\x6f\x72\x6c\x64\x03";
     let mut response = poll_oneone_only_read::<OneResponseLine>(input);
-    assert_eq!(response.status_code().unwrap(), 200);
+    assert_eq!(response.status().unwrap(), 200);
     let verify = "HTTP/1.1 200 OK\r\n\
                   Content-Length: 11\r\n\r\n\
                   hello world";

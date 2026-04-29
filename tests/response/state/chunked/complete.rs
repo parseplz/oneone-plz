@@ -48,7 +48,7 @@ fn test_response_state_chunked_multiple_large() {
                     Content-Length: 1100\r\n\r\n"
         .to_string()
         + &"hello world".repeat(100);
-    assert_eq!(result.status_code().unwrap(), 200);
+    assert_eq!(result.status().unwrap(), 200);
 
     let mut buf = BytesMut::new();
     result.try_decompress(&mut buf).unwrap();

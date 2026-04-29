@@ -8,7 +8,7 @@ fn test_response_state_message_head_single() {
                  Value: 10000\r\n\r\n";
 
     let response = poll_oneone_only_read::<OneResponseLine>(input.as_bytes());
-    assert_eq!(response.status_code().unwrap(), 200);
+    assert_eq!(response.status().unwrap(), 200);
     let result = response.into_bytes();
     assert_eq!(result, input);
 }
@@ -36,7 +36,7 @@ fn test_response_state_message_head_multiple() {
     assert!(matches!(state, State::End(_)));
 
     let result = state.try_into_frame().unwrap();
-    assert_eq!(result.status_code().unwrap(), 200);
+    assert_eq!(result.status().unwrap(), 200);
     let verify = "HTTP/1.1 200 OK\r\n\
                   Date: Mon, 18 Jul 2016 16:06:00 GMT\r\n\
                   Server: Apache\r\n\
@@ -52,7 +52,7 @@ fn test_response_state_message_head_multiple_two() {
         b"x-frame-options: DENY\r\n\r\n",
     ];
     let result = poll_oneone_multiple::<OneResponseLine>(chunks);
-    assert_eq!(result.status_code().unwrap(), 200);
+    assert_eq!(result.status().unwrap(), 200);
     let verify = "\
         HTTP/1.1 200 OK\r\n\
         Date: Mon, 18 Jul 2016 16:06:00 GMT\r\n\
@@ -67,7 +67,7 @@ fn test_response_state_switching_protocol() {
                 Upgrade: websocket\r\n\
                 Connection: Upgrade\r\n\r\n";
     let response = poll_oneone_only_read::<OneResponseLine>(input.as_bytes());
-    assert_eq!(response.status_code().unwrap(), 101);
+    assert_eq!(response.status().unwrap(), 101);
 }
 
 #[test]
@@ -75,7 +75,7 @@ fn test_response_state_not_modified() {
     let input = "HTTP/1.1 304 OK\r\n\
                  X-Test: test\r\n\r\n";
     let response = poll_oneone_only_read::<OneResponseLine>(input.as_bytes());
-    assert_eq!(response.status_code().unwrap(), 304);
+    assert_eq!(response.status().unwrap(), 304);
 }
 
 #[test]
@@ -100,3 +100,14 @@ fn test_response_no_content() {
     todo!()
 }
 */
+
+#[test]
+fn test_response_state_switching_protocol_body() {
+    let input = "HTTP/1.1 101 Switching Protocols\r\n\
+                Upgrade: websocket\r\n\
+                Connection: Upgrade\r\n\r\n\
+                hello";
+    let response =
+        poll_state_result_with_end::<OneResponseLine>(input.as_bytes());
+    dbg!(response);
+}

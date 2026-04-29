@@ -6,7 +6,7 @@ fn test_response_state_content_length() {
                  Content-Length: 5\r\n\r\n\
                  hello";
     let response = poll_oneone_only_read::<OneResponseLine>(input.as_bytes());
-    assert_eq!(response.status_code().unwrap(), 200);
+    assert_eq!(response.status().unwrap(), 200);
     assert_eq!(response.into_bytes(), input);
 }
 
@@ -16,7 +16,7 @@ fn test_response_state_content_length_zero() {
                  Location: /index.html\r\n\
                  Content-Length: 0\r\n\r\n";
     let response = poll_oneone_only_read::<OneResponseLine>(input.as_bytes());
-    assert_eq!(response.status_code().unwrap(), 307);
+    assert_eq!(response.status().unwrap(), 307);
     assert_eq!(response.into_bytes(), input);
 }
 
@@ -28,6 +28,6 @@ fn test_response_state_content_length_large() {
     input.push_str(&"hello world".repeat(100));
     let verify = input.clone();
     let response = poll_oneone_only_read::<OneResponseLine>(input.as_bytes());
-    assert_eq!(response.status_code().unwrap(), 200);
+    assert_eq!(response.status().unwrap(), 200);
     assert_eq!(response.into_bytes(), verify);
 }

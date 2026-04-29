@@ -8,7 +8,7 @@ fn test_response_state_cl_decompress_te_complete_gzip() {
     b"\xfb\xb5\xbd\x24\xa5\x45\x1f\xe2\x17\xe7\x19\xd3\x90\xd8\x52\x0f\x00\x00\x00"];
 
     let response = poll_oneone_multiple::<OneResponseLine>(chunks);
-    assert_eq!(response.status_code().unwrap(), 200);
+    assert_eq!(response.status().unwrap(), 200);
 
     let expected = "HTTP/1.1 200 OK\r\n\
                     Content-Length: 15\r\n\r\n\
