@@ -1,6 +1,6 @@
 [package]
 name = "oneone-plz"
-version = "0.0.13"
+version = "0.0.14"
 authors = ["darkseid", "sytten <emile@caido.io>"]
 description = "HTTP/1 parser for the ParsePlz ecosystem"
 repository = "https://github.com/parseplz/oneone-plz"
@@ -13,7 +13,7 @@ body-plz = "0.0.54"
 buffer-plz = "0.0.3"
 decompression-plz = "0.0.31"
 header-plz = "0.0.49"
-http-plz = "0.0.10"
+http-plz = "0.0.11"
 
 # basic 
 bytes = "1.11.1"
