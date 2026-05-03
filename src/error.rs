@@ -1,8 +1,6 @@
 use body_plz::{reader::chunked_reader::ChunkReaderError, variants::Body};
 use bytes::BytesMut;
-use decompression_plz::{
-    DecompressTrait, content_length::update_content_length,
-};
+use decompression_plz::DecompressTrait;
 use header_plz::{
     OneHeader, OneInfoLine,
     body_headers::parse::ParseBodyHeaders,
@@ -84,11 +82,10 @@ where
 
     fn try_from(value: HttpStateError<T>) -> Result<Self, Self::Error> {
         match value {
-            HttpStateError::ContentLengthPartial(boxed) => {
+            HttpStateError::ContentLengthPartial(boxed)
+            | HttpStateError::ChunkReaderPartial(boxed) => {
                 let (mut oneone, buf) = *boxed;
-                let len = buf.len();
                 oneone.set_body(Body::Raw(buf));
-                update_content_length(&mut oneone, len);
                 Ok(oneone)
             }
             _ => Err(value),
