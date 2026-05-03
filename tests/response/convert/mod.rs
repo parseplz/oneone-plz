@@ -1,7 +1,8 @@
 use super::*;
 
 // FIX
-// #[test]
+#[ignore]
+#[test]
 fn test_response_convert_no_cl() {
     let input = "HTTP/1.1 200 OK\r\n\
                  Host: reqbin.com\r\n\

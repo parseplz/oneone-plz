@@ -1,15 +1,11 @@
-#![allow(warnings, clippy::unwrap_used)]
 mod request;
 mod response;
 
 use buffer_plz::{Cursor, Event};
 use bytes::BytesMut;
-use header_plz::{OneHeader, OneMessageHead};
-use header_plz::{
-    OneInfoLine, body_headers::parse::ParseBodyHeaders,
-    message_head::MessageHead,
-};
-use header_plz::{OneRequestLine, OneResponseLine};
+use header_plz::OneMessageHead;
+use header_plz::OneResponseLine;
+use header_plz::{OneInfoLine, body_headers::parse::ParseBodyHeaders};
 use http_plz::OneOne;
 use oneone_plz::error::HttpStateError;
 use oneone_plz::state::State;
@@ -24,7 +20,7 @@ where
     let mut state: State<T> = State::new();
     state = state
         .try_next(Event::Read(&mut cbuf))
-        .unwrap();
+        .expect("poll state once");
     (buf, state)
 }
 
@@ -48,7 +44,9 @@ where
 {
     let (_, state) = poll_state_once(input);
     assert!(matches!(state, State::End(_)));
-    state.try_into_frame().unwrap()
+    state
+        .try_into_frame()
+        .expect("poll oneone only read")
 }
 
 pub fn poll_oneone_multiple<T>(input: &[&[u8]]) -> OneOne<T>
@@ -63,11 +61,14 @@ where
         cbuf.as_mut().extend_from_slice(chunk);
         state = state
             .try_next(Event::Read(&mut cbuf))
-            .unwrap();
+            .expect("poll state multiple");
     }
     state = state
         .try_next(Event::End(&mut cbuf))
-        .unwrap();
+        .expect("poll state end");
     assert!(state.is_ended());
-    state.try_into_frame().unwrap()
+    state.try_into_frame().expect(
+        "
+        into frame",
+    )
 }

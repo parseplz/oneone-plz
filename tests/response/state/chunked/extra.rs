@@ -51,7 +51,7 @@ fn test_response_state_chunked_extra_finished_single() {
                  hello \r\n\
                  0\r\n\r\n";
 
-    let (mut buf, mut state) =
+    let (mut buf, state) =
         poll_state_once::<OneResponseLine>(input.as_bytes());
     assert!(matches!(state, State::End(_)));
     let mut cbuf = Cursor::new(&mut buf);

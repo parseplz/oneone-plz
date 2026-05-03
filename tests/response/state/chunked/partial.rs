@@ -1,5 +1,3 @@
-use http_plz::OneResponse;
-
 use super::*;
 
 #[test]

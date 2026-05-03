@@ -26,7 +26,9 @@ fn test_response_state_cl_decompress_ce_extra_brotli_raw() {
             .try_into_frame()
             .unwrap();
     let mut buf = BytesMut::new();
-    response.try_decompress(&mut buf);
+    response
+        .try_decompress(&mut buf)
+        .unwrap();
     assert_eq!(response.into_bytes(), VERIFY);
 }
 
@@ -52,7 +54,9 @@ fn test_response_state_cl_decompress_ce_extra_brotli_separate_compression() {
             .try_into_frame()
             .unwrap();
     let mut buf = BytesMut::new();
-    response.try_decompress(&mut buf);
+    response
+        .try_decompress(&mut buf)
+        .unwrap();
     assert_eq!(response.into_bytes(), VERIFY);
 }
 
@@ -75,6 +79,8 @@ fn test_response_state_cl_decompress_ce_extra_brotli_single_compression() {
             .try_into_frame()
             .unwrap();
     let mut buf = BytesMut::new();
-    response.try_decompress(&mut buf);
+    response
+        .try_decompress(&mut buf)
+        .unwrap();
     assert_eq!(response.into_bytes(), VERIFY);
 }

@@ -5,12 +5,11 @@ fn test_response_state_close_body() {
     let input = "HTTP/1.1 200 OK\r\n\r\n\
                  HELLO WORLD";
 
-    let mut result = poll_state_result_with_end::<OneResponseLine>(
-        input.as_bytes().as_ref(),
-    )
-    .unwrap()
-    .try_into_frame()
-    .unwrap();
+    let mut result =
+        poll_state_result_with_end::<OneResponseLine>(input.as_bytes())
+            .unwrap()
+            .try_into_frame()
+            .unwrap();
 
     let mut buf = BytesMut::new();
     result.try_decompress(&mut buf).unwrap();

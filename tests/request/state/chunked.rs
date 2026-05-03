@@ -15,7 +15,7 @@ fn test_request_state_chunked_all() {
                  0\r\n\
                  Header: Val\r\n\
                  \r\n";
-    let result = poll_oneone_only_read::<OneRequestLine>(input.as_bytes());
+    let _result = poll_oneone_only_read::<OneRequestLine>(input.as_bytes());
     let verify = "POST /echo HTTP/1.1\r\n\
                   Host: reqbin.com\r\n\
                   Header: Val\r\n\

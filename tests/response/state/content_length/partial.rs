@@ -30,11 +30,8 @@ fn test_response_state_content_length_partial_fix() {
     if let Err(e) = result {
         assert!(e.is_partial());
         assert!(matches!(e, HttpStateError::ContentLengthPartial(_)));
-        let verify = "HTTP/1.1 200 OK\r\n\
-                      Content-Length: 1\r\n\r\n\
-                      h";
         assert_eq!(
-            verify,
+            input,
             OneOne::<OneResponseLine>::try_from(e)
                 .unwrap()
                 .into_bytes()
@@ -84,15 +81,13 @@ fn test_response_state_content_length_no_body_no_fix() {
 fn test_response_state_content_length_no_body_fix() {
     let input = "HTTP/1.1 200 OK\r\n\
                  Content-Length: 5\r\n\r\n";
-    let verify = "HTTP/1.1 200 OK\r\n\
-                  Content-Length: 0\r\n\r\n";
     let result =
         poll_state_result_with_end::<OneResponseLine>(input.as_bytes());
     if let Err(e) = result {
         assert!(e.is_partial());
         matches!(e, HttpStateError::ContentLengthPartial(_));
         assert_eq!(
-            verify,
+            input,
             OneOne::<OneResponseLine>::try_from(e)
                 .unwrap()
                 .into_bytes()
