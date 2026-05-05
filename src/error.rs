@@ -10,24 +10,25 @@ use http_plz::OneOne;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
-pub enum HttpStateError<T>
+pub enum Error<T>
 where
     T: OneInfoLine,
 {
+    // Parsing error
     #[error("header read| {0}")]
     InfoLine(#[from] MessageHeadError),
     #[error("chunkreader| {0}")]
-    ChunkState(#[from] ChunkReaderError),
+    ChunkState(ChunkReaderError, Box<OneOne<T>>),
     // Partial
     #[error("partial| header")]
     Unparsed(BytesMut),
     #[error("partial| content length")]
     ContentLengthPartial(Box<(OneOne<T>, BytesMut)>),
-    #[error("header not enough data")]
+    #[error("partial| chunked")]
     ChunkReaderPartial(Box<(OneOne<T>, BytesMut)>),
 }
 
-impl<T> HttpStateError<T>
+impl<T> Error<T>
 where
     T: OneInfoLine + std::fmt::Debug,
     MessageHead<T, OneHeader>: ParseBodyHeaders,
@@ -36,35 +37,45 @@ where
         BytesMut::from(self)
     }
 
-    pub fn try_into_one(self) -> Result<OneOne<T>, HttpStateError<T>> {
+    pub fn try_into_msg(self) -> Result<OneOne<T>, Error<T>> {
         OneOne::<T>::try_from(self)
     }
 
+    pub fn is_parse_error(&self) -> bool {
+        use Error::*;
+        matches!(self, InfoLine(_)) | matches!(self, ChunkState(..))
+    }
+
     pub fn is_partial(&self) -> bool {
-        matches!(self, Self::ContentLengthPartial(_))
+        use Error::*;
+        matches!(self, ContentLengthPartial(_))
+            | matches!(self, ChunkReaderPartial(_))
+            | matches!(self, ChunkState(..))
     }
 
     pub fn is_unparsed(&self) -> bool {
-        matches!(self, Self::Unparsed(_))
+        use Error::*;
+        matches!(self, Unparsed(_)) | matches!(self, InfoLine(_))
     }
 }
 
-impl<T> From<HttpStateError<T>> for BytesMut
+impl<T> From<Error<T>> for BytesMut
 where
     T: OneInfoLine + std::fmt::Debug,
     MessageHead<T, OneHeader>: ParseBodyHeaders,
 {
-    fn from(value: HttpStateError<T>) -> Self {
+    fn from(value: Error<T>) -> Self {
+        use Error::*;
         match value {
-            HttpStateError::Unparsed(buf) => buf,
-            HttpStateError::ContentLengthPartial(boxed)
-            | HttpStateError::ChunkReaderPartial(boxed) => {
+            InfoLine(err) => err.into_bytes(),
+            Unparsed(buf) => buf,
+            ContentLengthPartial(boxed) | ChunkReaderPartial(boxed) => {
                 let (oneone, buf) = *boxed;
                 let mut data = oneone.into_bytes();
                 data.unsplit(buf);
                 data
             }
-            _ => BytesMut::new(),
+            ChunkState(_, boxed) => boxed.into_bytes(),
         }
     }
 }
@@ -73,21 +84,22 @@ where
 #[error("incorrect state| {0}")]
 pub struct IncorrectState(pub(crate) String);
 
-impl<T> TryFrom<HttpStateError<T>> for OneOne<T>
+impl<T> TryFrom<Error<T>> for OneOne<T>
 where
     T: OneInfoLine,
     MessageHead<T, OneHeader>: ParseBodyHeaders,
 {
-    type Error = HttpStateError<T>;
+    type Error = Error<T>;
 
-    fn try_from(value: HttpStateError<T>) -> Result<Self, Self::Error> {
+    fn try_from(value: Error<T>) -> Result<Self, Self::Error> {
         match value {
-            HttpStateError::ContentLengthPartial(boxed)
-            | HttpStateError::ChunkReaderPartial(boxed) => {
+            Error::ContentLengthPartial(boxed)
+            | Error::ChunkReaderPartial(boxed) => {
                 let (mut oneone, buf) = *boxed;
                 oneone.set_body(Body::Raw(buf));
                 Ok(oneone)
             }
+            Error::ChunkState(_, boxed) => Ok(*boxed),
             _ => Err(value),
         }
     }

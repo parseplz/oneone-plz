@@ -1,4 +1,4 @@
-use oneone_plz::error::HttpStateError;
+use oneone_plz::error::Error;
 
 use super::*;
 
@@ -85,7 +85,7 @@ fn test_response_state_message_head_parital() {
     let mut cbuf = Cursor::new(&mut buf);
     let event = Event::End(&mut cbuf);
     let state: State<OneResponseLine> = State::new();
-    if let Err(HttpStateError::Unparsed(buf)) = state.try_next(event) {
+    if let Err(Error::Unparsed(buf)) = state.try_next(event) {
         assert_eq!(buf, input);
     } else {
         panic!()

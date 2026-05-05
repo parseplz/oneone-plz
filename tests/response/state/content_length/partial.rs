@@ -10,7 +10,7 @@ fn test_response_state_content_length_partial_no_fix() {
 
     if let Err(e) = err {
         assert!(e.is_partial());
-        assert!(matches!(e, HttpStateError::ContentLengthPartial(_)));
+        assert!(matches!(e, Error::ContentLengthPartial(_)));
         let verify = "HTTP/1.1 200 OK\r\n\
                       Content-Length: 5\r\n\r\n\
                       h";
@@ -29,7 +29,7 @@ fn test_response_state_content_length_partial_fix() {
         poll_state_result_with_end::<OneResponseLine>(input.as_bytes());
     if let Err(e) = result {
         assert!(e.is_partial());
-        assert!(matches!(e, HttpStateError::ContentLengthPartial(_)));
+        assert!(matches!(e, Error::ContentLengthPartial(_)));
         assert_eq!(
             input,
             OneOne::<OneResponseLine>::try_from(e)
@@ -50,7 +50,7 @@ fn test_response_state_content_length_partial_two() {
                    h";
 
     let result = poll_state_result_with_end::<OneResponseLine>(res.as_bytes());
-    if let Err(HttpStateError::ContentLengthPartial(boxed)) = result {
+    if let Err(Error::ContentLengthPartial(boxed)) = result {
         let (one, buf) = *boxed;
         let data = one.into_bytes();
         assert_eq!(data, &res[..res.len() - 1]);
@@ -68,7 +68,7 @@ fn test_response_state_content_length_no_body_no_fix() {
         poll_state_result_with_end::<OneResponseLine>(input.as_bytes());
     if let Err(e) = result {
         assert!(e.is_partial());
-        matches!(e, HttpStateError::ContentLengthPartial(_));
+        matches!(e, Error::ContentLengthPartial(_));
         let verify = "HTTP/1.1 200 OK\r\n\
                       Content-Length: 5\r\n\r\n";
         assert_eq!(verify, BytesMut::from(e));
@@ -85,7 +85,7 @@ fn test_response_state_content_length_no_body_fix() {
         poll_state_result_with_end::<OneResponseLine>(input.as_bytes());
     if let Err(e) = result {
         assert!(e.is_partial());
-        matches!(e, HttpStateError::ContentLengthPartial(_));
+        matches!(e, Error::ContentLengthPartial(_));
         assert_eq!(
             input,
             OneOne::<OneResponseLine>::try_from(e)

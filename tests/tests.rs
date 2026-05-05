@@ -7,7 +7,7 @@ use header_plz::OneMessageHead;
 use header_plz::OneResponseLine;
 use header_plz::{OneInfoLine, body_headers::parse::ParseBodyHeaders};
 use http_plz::OneOne;
-use oneone_plz::error::HttpStateError;
+use oneone_plz::error::Error;
 use oneone_plz::state::State;
 
 pub fn poll_state_once<T>(input: &[u8]) -> (BytesMut, State<T>)
@@ -27,7 +27,7 @@ where
 #[allow(clippy::result_large_err)]
 pub fn poll_state_result_with_end<T>(
     input: &[u8],
-) -> Result<State<T>, HttpStateError<T>>
+) -> Result<State<T>, Error<T>>
 where
     T: OneInfoLine + std::fmt::Debug,
     OneMessageHead<T>: ParseBodyHeaders,

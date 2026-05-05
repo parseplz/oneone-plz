@@ -7,7 +7,7 @@ fn test_request_state_partial_info_line_only() {
         poll_state_result_with_end::<OneRequestLine>(input.as_bytes())
             .unwrap_err();
     assert!(result.is_unparsed());
-    assert!(matches!(result, HttpStateError::Unparsed(_)));
+    assert!(matches!(result, Error::Unparsed(_)));
 }
 
 #[test]

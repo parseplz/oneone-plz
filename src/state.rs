@@ -17,7 +17,7 @@ use header_plz::{
 };
 use http_plz::OneOne;
 
-use crate::error::{HttpStateError, IncorrectState};
+use crate::error::{Error, IncorrectState};
 
 #[derive(Debug, PartialEq)]
 pub enum State<T>
@@ -65,7 +65,7 @@ where
     fn build_oneone(
         headers: BytesMut,
         buf: &mut Cursor,
-    ) -> Result<Self, HttpStateError<T>> {
+    ) -> Result<Self, Error<T>> {
         let mut one = OneOne::try_from_message_head_buf(headers)?;
         let next_state = match one.body_headers() {
             None => Self::End(one),
@@ -97,10 +97,7 @@ where
     T: OneInfoLine + std::fmt::Debug,
     MessageHead<T, OneHeader>: ParseBodyHeaders,
 {
-    pub fn try_next(
-        mut self,
-        event: Event,
-    ) -> Result<Self, HttpStateError<T>> {
+    pub fn try_next(mut self, event: Event) -> Result<Self, Error<T>> {
         use State::*;
         match (self, event) {
             (ReadMessageHead, Event::Read(buf)) => {
@@ -117,7 +114,7 @@ where
                 }
             }
             (ReadMessageHead, Event::End(buf)) => {
-                Err(HttpStateError::Unparsed(buf.into_inner()))?
+                Err(Error::Unparsed(buf.into_inner()))?
             }
             (ReadBodyContentLength(mut oneone, mut size), mut event) => {
                 match event {
@@ -145,7 +142,7 @@ where
                                     Ok(ReadBodyContentLength(oneone, size))
                                 }
                                 Event::End(buf) => {
-                                    Err(HttpStateError::ContentLengthPartial(
+                                    Err(Error::ContentLengthPartial(
                                         (oneone, buf.split_at_current_pos())
                                             .into(),
                                     ))?
@@ -189,7 +186,10 @@ where
                                 };
                             }
                             ChunkReaderState::Failed(e) => {
-                                return Err(e.into());
+                                return Err(Error::ChunkState(
+                                    e,
+                                    Box::new(oneone),
+                                ));
                             }
                             _ => continue,
                         }
@@ -199,11 +199,9 @@ where
                     }
                 }
             },
-            (ReadBodyChunked(oneone, _), Event::End(buf)) => {
-                Err(HttpStateError::ChunkReaderPartial(
-                    (oneone, buf.into_inner()).into(),
-                ))
-            }
+            (ReadBodyChunked(oneone, _), Event::End(buf)) => Err(
+                Error::ChunkReaderPartial((oneone, buf.into_inner()).into()),
+            ),
             (ReadBodyChunkedExtra(oneone), Event::Read(_)) => {
                 Ok(ReadBodyChunkedExtra(oneone))
             }
