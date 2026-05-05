@@ -25,7 +25,6 @@ where
     (buf, state)
 }
 
-#[allow(clippy::result_large_err)]
 pub fn poll_state_result_with_end<T>(
     input: &[u8],
 ) -> Result<State<T>, Error<T>>

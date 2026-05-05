@@ -61,7 +61,6 @@ where
      *      3. Default => End
      */
 
-    #[allow(clippy::result_large_err)]
     fn build_oneone(
         headers: BytesMut,
         buf: &mut Cursor,
@@ -71,13 +70,10 @@ where
             None => Self::End(one),
             Some(body_headers) => match body_headers.transfer_type {
                 Some(tt) => match tt {
+                    TransferType::ContentLength(0) => Self::End(one),
                     TransferType::ContentLength(size) => {
-                        if size == 0 {
-                            Self::End(one)
-                        } else {
-                            buf.as_mut().reserve(size);
-                            Self::ReadBodyContentLength(one, size)
-                        }
+                        buf.as_mut().reserve(size);
+                        Self::ReadBodyContentLength(one, size)
                     }
                     TransferType::Chunked => {
                         one.set_body(Body::Chunked(Vec::new()));
@@ -100,64 +96,47 @@ where
     pub fn try_next(mut self, event: Event) -> Result<Self, Error<T>> {
         use State::*;
         match (self, event) {
-            (ReadMessageHead, ref mut event) => match event {
-                Event::Read(buf) | Event::End(buf) => {
-                    match MessageHead::is_complete(buf) {
-                        true => {
-                            let raw_headers = buf.split_at_current_pos();
-                            self = State::build_oneone(raw_headers, buf)?;
-                            if buf.len() > 0 {
-                                let event = match event {
-                                    Event::Read(buf) => Event::Read(buf),
-                                    Event::End(buf) => Event::End(buf),
-                                };
-                                self = self.try_next(event)?;
-                            }
-                            Ok(self)
+            (ReadMessageHead, ref mut event) => {
+                let buf = event.inner_mut();
+                if !MessageHead::is_complete(buf) {
+                    return match event {
+                        Event::Read(_) => Ok(ReadMessageHead),
+                        Event::End(buf) => {
+                            Err(Error::Unparsed(buf.into_inner()))?
                         }
-                        false => match event {
-                            Event::Read(_) => Ok(ReadMessageHead),
-                            Event::End(buf) => {
-                                Err(Error::Unparsed(buf.into_inner()))?
-                            }
-                        },
-                    }
+                    };
                 }
-            },
+                let raw_headers = buf.split_at_current_pos();
+                self = State::build_oneone(raw_headers, buf)?;
+                if !buf.is_empty() {
+                    let event = match event {
+                        Event::Read(buf) => Event::Read(buf),
+                        Event::End(buf) => Event::End(buf),
+                    };
+                    self = self.try_next(event)?;
+                }
+                Ok(self)
+            }
             (ReadBodyContentLength(mut oneone, mut size), mut event) => {
-                match event {
-                    Event::Read(ref mut buf) | Event::End(ref mut buf) => {
-                        match read_content_length(buf, &mut size) {
-                            true => {
-                                oneone.set_body(Body::Raw(
-                                    buf.split_at_current_pos(),
-                                ));
-                                if buf.len() > 0 {
-                                    let next_state =
-                                        ReadBodyContentLengthExtra(oneone);
-                                    match event {
-                                        Event::Read(_) => Ok(next_state),
-                                        Event::End(_) => {
-                                            next_state.try_next(event)
-                                        }
-                                    }
-                                } else {
-                                    Ok(End(oneone))
-                                }
-                            }
-                            false => match event {
-                                Event::Read(_) => {
-                                    Ok(ReadBodyContentLength(oneone, size))
-                                }
-                                Event::End(buf) => {
-                                    Err(Error::ContentLengthPartial(
-                                        (oneone, buf.split_at_current_pos())
-                                            .into(),
-                                    ))?
-                                }
-                            },
+                let buf = event.inner_mut();
+                if !read_content_length(buf, &mut size) {
+                    return match event {
+                        Event::Read(_) => {
+                            Ok(ReadBodyContentLength(oneone, size))
                         }
-                    }
+                        Event::End(buf) => Err(Error::ContentLengthPartial(
+                            (oneone, buf.split_at_current_pos()).into(),
+                        )),
+                    };
+                }
+                oneone.set_body(Body::Raw(buf.split_at_current_pos()));
+                if buf.is_empty() {
+                    return Ok(End(oneone));
+                }
+                let next_state = ReadBodyContentLengthExtra(oneone);
+                match event {
+                    Event::Read(_) => Ok(next_state),
+                    Event::End(_) => next_state.try_next(event),
                 }
             }
             (ReadBodyContentLengthExtra(oneone), Event::Read(_)) => {
@@ -171,40 +150,33 @@ where
                 ReadBodyChunked(mut oneone, mut chunk_state),
                 Event::Read(buf),
             ) => loop {
-                match chunk_state.next(buf) {
-                    Some(chunk_to_add) => {
-                        oneone
-                            .body_as_mut()
-                            .expect("no chunked body")
-                            .push_chunk(chunk_to_add);
-                        match chunk_state {
-                            ChunkReaderState::LastChunk => {
-                                chunk_state = if oneone.has_trailers() {
-                                    ChunkReaderState::ReadTrailers
-                                } else {
-                                    ChunkReaderState::EndCRLF
-                                };
-                                continue;
-                            }
-                            ChunkReaderState::End => {
-                                return if buf.len() > 0 {
-                                    Ok(State::ReadBodyChunkedExtra(oneone))
-                                } else {
-                                    Ok(End(oneone))
-                                };
-                            }
-                            ChunkReaderState::Failed(e) => {
-                                return Err(Error::ChunkState(
-                                    e,
-                                    Box::new(oneone),
-                                ));
-                            }
-                            _ => continue,
-                        }
+                let Some(chunk_to_add) = chunk_state.next(buf) else {
+                    return Ok(ReadBodyChunked(oneone, chunk_state));
+                };
+                oneone
+                    .body_as_mut()
+                    .expect("no chunked body")
+                    .push_chunk(chunk_to_add);
+                match chunk_state {
+                    ChunkReaderState::LastChunk => {
+                        chunk_state = if oneone.has_trailers() {
+                            ChunkReaderState::ReadTrailers
+                        } else {
+                            ChunkReaderState::EndCRLF
+                        };
+                        continue;
                     }
-                    None => {
-                        return Ok(ReadBodyChunked(oneone, chunk_state));
+                    ChunkReaderState::End => {
+                        return if !buf.is_empty() {
+                            Ok(State::ReadBodyChunkedExtra(oneone))
+                        } else {
+                            Ok(End(oneone))
+                        };
                     }
+                    ChunkReaderState::Failed(e) => {
+                        return Err(Error::ChunkState(e, Box::new(oneone)));
+                    }
+                    _ => {}
                 }
             },
             (ReadBodyChunked(oneone, _), Event::End(buf)) => Err(

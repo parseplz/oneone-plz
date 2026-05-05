@@ -26,6 +26,20 @@ fn test_error_info_line_second_ows() {
     assert_eq!(err.into_bytes(), input.as_bytes());
 }
 
+#[ignore]
+#[test]
+fn test_error_chunked_state() {
+    let input = "POST /path HTTP/1.1\r\n\
+                 Host: example.com\r\n\
+                 Transfer-Encoding: chunked\r\n\r\n\
+                 123G\r\n\
+                 a\r\n";
+    let err = poll_err(input.as_bytes());
+    dbg!(&err);
+    assert!(matches!(err, Error::ChunkState(_, _)));
+    assert_eq!(err.into_bytes(), input.as_bytes());
+}
+
 #[test]
 fn test_error_unparsed() {
     let input = "helloworld";
