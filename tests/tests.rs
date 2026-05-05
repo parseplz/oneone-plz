@@ -1,3 +1,4 @@
+mod error_cases;
 mod request;
 mod response;
 

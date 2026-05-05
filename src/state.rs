@@ -100,22 +100,30 @@ where
     pub fn try_next(mut self, event: Event) -> Result<Self, Error<T>> {
         use State::*;
         match (self, event) {
-            (ReadMessageHead, Event::Read(buf)) => {
-                match MessageHead::is_complete(buf) {
-                    true => {
-                        let raw_headers = buf.split_at_current_pos();
-                        self = State::build_oneone(raw_headers, buf)?;
-                        if buf.len() > 0 {
-                            self = self.try_next(Event::Read(buf))?;
+            (ReadMessageHead, ref mut event) => match event {
+                Event::Read(buf) | Event::End(buf) => {
+                    match MessageHead::is_complete(buf) {
+                        true => {
+                            let raw_headers = buf.split_at_current_pos();
+                            self = State::build_oneone(raw_headers, buf)?;
+                            if buf.len() > 0 {
+                                let event = match event {
+                                    Event::Read(buf) => Event::Read(buf),
+                                    Event::End(buf) => Event::End(buf),
+                                };
+                                self = self.try_next(event)?;
+                            }
+                            Ok(self)
                         }
-                        Ok(self)
+                        false => match event {
+                            Event::Read(_) => Ok(ReadMessageHead),
+                            Event::End(buf) => {
+                                Err(Error::Unparsed(buf.into_inner()))?
+                            }
+                        },
                     }
-                    false => Ok(Self::ReadMessageHead),
                 }
-            }
-            (ReadMessageHead, Event::End(buf)) => {
-                Err(Error::Unparsed(buf.into_inner()))?
-            }
+            },
             (ReadBodyContentLength(mut oneone, mut size), mut event) => {
                 match event {
                     Event::Read(ref mut buf) | Event::End(ref mut buf) => {
