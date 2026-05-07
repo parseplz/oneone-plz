@@ -6,7 +6,7 @@ use header_plz::{
     body_headers::parse::ParseBodyHeaders,
     message_head::{MessageHead, error::MessageHeadError},
 };
-use http_plz::OneOne;
+use http_plz::OneOne as Msg;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -18,14 +18,14 @@ where
     #[error("header read| {0}")]
     InfoLine(#[from] MessageHeadError),
     #[error("chunkreader| {0}")]
-    ChunkState(ChunkReaderError, Box<OneOne<T>>),
+    ChunkState(ChunkReaderError, Box<Msg<T>>),
     // Partial
     #[error("partial| header")]
     Unparsed(BytesMut),
     #[error("partial| content length")]
-    ContentLengthPartial(Box<(OneOne<T>, BytesMut)>),
+    ContentLengthPartial(Box<(Msg<T>, BytesMut)>),
     #[error("partial| chunked")]
-    ChunkReaderPartial(Box<(OneOne<T>, BytesMut)>),
+    ChunkReaderPartial(Box<(Msg<T>, BytesMut)>),
 }
 
 impl<T> Error<T>
@@ -37,8 +37,8 @@ where
         BytesMut::from(self)
     }
 
-    pub fn try_into_msg(self) -> Result<OneOne<T>, Error<T>> {
-        OneOne::<T>::try_from(self)
+    pub fn try_into_msg(self) -> Result<Msg<T>, Error<T>> {
+        Msg::<T>::try_from(self)
     }
 
     pub fn is_parse_error(&self) -> bool {
@@ -84,7 +84,7 @@ where
 #[error("incorrect state| {0}")]
 pub struct IncorrectState(pub(crate) String);
 
-impl<T> TryFrom<Error<T>> for OneOne<T>
+impl<T> TryFrom<Error<T>> for Msg<T>
 where
     T: OneInfoLine,
     MessageHead<T, OneHeader>: ParseBodyHeaders,

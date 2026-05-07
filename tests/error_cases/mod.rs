@@ -70,3 +70,31 @@ fn test_error_chunked_partial() {
     assert!(matches!(err, Error::ChunkReaderPartial(_)));
     assert_eq!(err.into_bytes(), input.as_bytes());
 }
+
+#[test]
+fn test_error_message_head_partial_cl() {
+    let input = "HTTP/1.1 200 OK\r\n\
+                 Host: example.com\r\n\
+                 Content-Length: 10\r\n\r\n";
+    let mut buf = BytesMut::from(input);
+    let mut cbuf = Cursor::new(&mut buf);
+    let state: State<OneResponseLine> = State::new();
+    let err = state
+        .try_next(Event::End(&mut cbuf))
+        .unwrap_err();
+    assert_eq!(err.into_bytes(), &input);
+}
+
+#[test]
+fn test_error_message_head_partial_chunked() {
+    let input = "HTTP/1.1 200 OK\r\n\
+                 Host: example.com\r\n\
+                 Transfer-Encoding: chunked\r\n\r\n";
+    let mut buf = BytesMut::from(input);
+    let mut cbuf = Cursor::new(&mut buf);
+    let state: State<OneResponseLine> = State::new();
+    let err = state
+        .try_next(Event::End(&mut cbuf))
+        .unwrap_err();
+    assert_eq!(err.into_bytes(), &input);
+}
