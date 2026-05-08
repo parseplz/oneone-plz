@@ -50,12 +50,10 @@ where
         use Error::*;
         matches!(self, ContentLengthPartial(_))
             | matches!(self, ChunkReaderPartial(_))
-            | matches!(self, ChunkState(..))
     }
 
     pub fn is_unparsed(&self) -> bool {
-        use Error::*;
-        matches!(self, Unparsed(_)) | matches!(self, InfoLine(_))
+        matches!(self, Self::Unparsed(_))
     }
 }
 
@@ -82,7 +80,7 @@ where
 
 #[derive(Debug, Error, Default)]
 #[error("incorrect state| {0}")]
-pub struct IncorrectState(pub(crate) String);
+pub struct IncorrectState(pub String);
 
 impl<T> TryFrom<Error<T>> for Msg<T>
 where
